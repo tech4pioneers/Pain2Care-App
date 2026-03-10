@@ -5,205 +5,62 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-<meta name="apple-mobile-web-app-title" content="RiseThrough"/>
-<meta name="theme-color" content="#FF4D6D"/>
-<title>RiseThrough</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
-<!-- Firebase -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyCHu8EZEVUYFGDueH06mAhaxZeMEeTD4qU",
-    authDomain: "pain2care.firebaseapp.com",
-    databaseURL: "https://pain2care-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "pain2care",
-    storageBucket: "pain2care.firebasestorage.app",
-    messagingSenderId: "936766185723",
-    appId: "1:936766185723:web:78c7ef648e9e62a4fb105e"
-  };
-
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getDatabase(app);
-
-  // Expose to global scope for use in main script
-  window.fbAuth = auth;
-  window.fbDb = db;
-  window.fbFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, ref, set, get, push, onValue };
-
-  // Listen for auth state changes
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      window.state.currentUser = { name: user.displayName || user.email.split('@')[0], email: user.email, uid: user.uid, plan: "trial", trialStart: Date.now() };
-      // Load user data from Firebase
-      const userRef = window.fbFns.ref(window.fbDb, 'users/' + user.uid);
-      window.fbFns.get(userRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.val();
-          window.state.currentUser = { ...window.state.currentUser, ...data };
-          window.state.history = data.history ? Object.values(data.history) : window.state.history;
-        }
-        window.state.authStep = 'app';
-        window.state.chatName = window.state.currentUser.name;
-        window.render();
-      });
-    } else {
-      if (window.state.authStep === 'app') {
-        window.state.authStep = 'login';
-        window.render();
-      }
-    }
-  });
-
-  // Save checkin to Firebase
-  window.saveCheckin = async (entry) => {
-    if (!auth.currentUser) return;
-    const uid = auth.currentUser.uid;
-    await window.fbFns.set(window.fbFns.ref(window.fbDb, 'users/' + uid + '/history/' + entry.id), entry);
-  };
-
-  // Firebase auth functions
-  window.firebaseLogin = async (email, pass) => {
-    return window.fbFns.signInWithEmailAndPassword(auth, email, pass);
-  };
-
-  window.firebaseRegister = async (email, pass, name) => {
-    const cred = await window.fbFns.createUserWithEmailAndPassword(auth, email, pass);
-    await window.fbFns.updateProfile(cred.user, { displayName: name });
-    // Save user profile to database
-    await window.fbFns.set(window.fbFns.ref(window.fbDb, 'users/' + cred.user.uid), {
-      name, email, plan: 'trial', trialStart: Date.now(), createdAt: Date.now()
-    });
-    return cred;
-  };
-
-  window.firebaseLogout = async () => {
-    await window.fbFns.signOut(auth);
-  };
-</script>
+<meta name="apple-mobile-web-app-title" content="Pain2Care"/>
+<meta name="theme-color" content="#1a6fa0"/>
+<title>Pain2Care</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{background:#0A0A0F;font-family:'Barlow',sans-serif;color:#F0EEF6;overscroll-behavior:none;max-width:430px;margin:0 auto;min-height:100vh}
-input,textarea,button{font-family:'Barlow',sans-serif}
-input::placeholder,textarea::placeholder{color:#3a3a52}
+body{font-family:'Nunito',sans-serif;background:linear-gradient(135deg,#c8e8f8 0%,#a8d4f0 25%,#bce0f5 50%,#d4edf8 75%,#b8dcf0 100%);min-height:100vh;overscroll-behavior:none}
+input[type=range]{-webkit-appearance:none;appearance:none;height:8px;border-radius:8px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;cursor:pointer;background:#e63946;box-shadow:0 2px 8px rgba(230,57,70,0.4)}
+input::placeholder,textarea::placeholder{color:#9bbccc}
+textarea{font-family:'Nunito',sans-serif}
 ::-webkit-scrollbar{display:none}
-input[type=range]{-webkit-appearance:none;width:100%;height:6px;border-radius:4px;outline:none;cursor:pointer;background:#1E1E2E}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;cursor:pointer;background:#FF4D6D}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-@keyframes glow{0%,100%{box-shadow:0 0 20px #FF4D6D44}50%{box-shadow:0 0 40px #FF4D6D88}}
-
-.app{min-height:100vh;padding-bottom:80px}
-.card{background:#12121A;border-radius:20px;padding:24px;margin:0 24px 20px;border:1px solid #1E1E2E;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FF4D6D,#7B61FF);border-radius:20px 20px 0 0}
-.s-title{font-family:'Bebas Neue',sans-serif;font-size:20px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
-.sub{font-size:12px;color:#6B6880;margin-bottom:16px;line-height:1.5}
-.btn{display:block;width:100%;padding:15px 20px;font-family:'Bebas Neue',sans-serif;font-size:17px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border:none;border-radius:14px;color:#fff;transition:opacity .2s}
-.btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-outline{background:transparent!important;border:2px solid currentColor!important}
-.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;display:flex;justify-content:space-around;padding:10px 0 16px;border-top:1px solid #1E1E2E;background:#0A0A0F;z-index:100}
-.nav button{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;color:#6B6880;font-size:9px;letter-spacing:.07em;text-transform:uppercase;border:none;background:transparent;padding:0 6px;transition:color .2s}
-.nav button.active{color:#FF4D6D}
-.nav button span{font-size:20px}
-.hero{padding:26px 24px 0;animation:fadeIn .5s ease both}
-.hero h1{font-family:'Bebas Neue',sans-serif;font-size:44px;font-weight:900;line-height:1;text-transform:uppercase}
-.hero p{font-size:13px;color:#6B6880;margin-top:6px;margin-bottom:26px}
-.input-wrap{margin-bottom:16px}
-.input-wrap label{display:block;font-size:11px;color:#6B6880;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-.input-wrap .field-wrap{position:relative}
-.input-wrap .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none}
-.input-wrap input{width:100%;background:#0D0D16;border:1.5px solid #1E1E2E;border-radius:12px;color:#F0EEF6;font-size:14px;padding:12px 14px;outline:none;transition:border-color .2s}
-.input-wrap input.with-icon{padding-left:42px}
-.input-wrap input.error{border-color:#FF4D6D}
-.input-wrap .err-msg{font-size:11px;color:#FF4D6D;margin-top:4px}
-.area-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.area-chip{padding:10px 6px;border-radius:12px;border:1.5px solid #1E1E2E;color:#6B6880;font-size:11px;font-weight:600;letter-spacing:.05em;cursor:pointer;text-align:center;transition:all .2s;text-transform:uppercase;background:transparent}
-.area-chip.active{border-color:#FF4D6D;background:#FF4D6D22;color:#FF4D6D}
-.mood-row{display:flex;gap:6px}
-.mood-btn{flex:1;padding:12px 4px;border-radius:14px;border:2px solid #1E1E2E;background:transparent;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .2s}
-.mood-btn .emoji{font-size:24px}
-.mood-btn .lbl{font-size:9px;color:#6B6880;letter-spacing:.06em;text-transform:uppercase}
-.check-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #1E1E2E;cursor:pointer}
-.check-row:last-child{border-bottom:none}
-.checkbox{width:22px;height:22px;border-radius:6px;border:2px solid #6B6880;background:transparent;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s;font-size:12px;color:#fff}
-.checkbox.checked{border-color:#7B61FF;background:#7B61FF}
-.affirmation{margin:0 24px 20px;padding:18px 22px;border-left:4px solid #FF4D6D;background:#FF4D6D11;border-radius:0 16px 16px 0}
-.affirmation .aff-label{font-size:10px;color:#FF4D6D;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
-.affirmation .aff-text{font-size:15px;font-style:italic;line-height:1.6}
-.stat-pills{display:flex;gap:10px;padding:0 24px;margin-bottom:20px;overflow-x:auto}
-.stat-pill{background:#12121A;border:1px solid #1E1E2E;border-radius:14px;padding:12px 16px;flex-shrink:0}
-.stat-pill .pill-label{font-size:10px;color:#6B6880;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
-.stat-pill .pill-val{font-family:'Bebas Neue',sans-serif;font-size:22px}
-.chat-log{height:300px;overflow-y:auto;padding:10px 0}
-.bubble-wrap{padding:6px 14px;display:flex;gap:8px;align-items:flex-start}
-.bubble-wrap.mine{flex-direction:row-reverse}
-.bubble{padding:10px 13px;font-size:13px;line-height:1.5;color:#F0EEF6;max-width:76%}
-.bubble.theirs{background:#1E1E2E;border-radius:16px 16px 16px 3px}
-.bubble.mine{background:#7B61FF;border-radius:16px 16px 3px 16px}
-.bubble-name{font-size:11px;color:#7B61FF;margin-bottom:3px;font-weight:600}
-.bubble-time{font-size:10px;color:#6B6880;margin-top:3px}
-.auth-shell{min-height:100vh;padding:0 24px 40px;position:relative;overflow:hidden}
-.auth-blob1{position:fixed;top:-80px;right:-80px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,#FF4D6D22,transparent 70%);pointer-events:none}
-.auth-blob2{position:fixed;bottom:-60px;left:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,#7B61FF22,transparent 70%);pointer-events:none}
-.auth-logo{text-align:center;padding:48px 0 8px;animation:fadeIn .4s ease both}
-.auth-logo .fire{font-size:52px;animation:float 3s ease-in-out infinite;display:block}
-.auth-logo h1{font-family:'Bebas Neue',sans-serif;font-size:36px;letter-spacing:.1em;color:#FF4D6D;margin-top:8px}
-.auth-logo p{font-size:12px;color:#6B6880;letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
-.strength-bars{display:flex;gap:4px;margin-bottom:4px}
-.strength-bar{flex:1;height:3px;border-radius:2px;transition:background .3s}
-.digit-input{width:42px;height:54px;text-align:center;background:#0D0D16;border:2px solid #1E1E2E;border-radius:12px;color:#F0EEF6;font-family:'Bebas Neue',sans-serif;font-size:26px;outline:none;transition:border-color .2s}
-.digit-input.filled{border-color:#7B61FF}
-.trial-banner{margin:12px 24px 0;padding:10px 16px;background:#FFD16611;border:1px solid #FFD16644;border-radius:12px;display:flex;align-items:center;gap:10px;cursor:pointer}
-.plan-toggle{background:#12121A;border-radius:16px;padding:6px;display:flex;gap:6px;margin-bottom:20px;border:1px solid #1E1E2E}
-.plan-opt{flex:1;padding:14px 10px;border-radius:12px;text-align:center;cursor:pointer;transition:all .25s}
-.plan-opt.active{background:#7B61FF}
-.plan-opt .plan-name{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.06em;text-transform:uppercase}
-.plan-opt .plan-price{font-family:'Bebas Neue',sans-serif;font-size:26px;margin-top:2px}
-.plan-opt .plan-sub{font-size:10px;color:#6B6880;margin-top:2px}
-.best-badge{font-size:10px;background:#FFD16622;color:#FFD166;border-radius:6px;padding:2px 8px;margin-top:6px;display:inline-block}
-.plan-opt.active .plan-sub{color:rgba(255,255,255,.7)}
-.plan-opt.active .best-badge{background:rgba(255,255,255,.2);color:#fff}
-.feature-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #1E1E2E}
-.feature-check{width:16px;height:16px;border-radius:50%;background:#00C98D;display:flex;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0;font-size:10px;color:#fff}
-.insight-section{margin-bottom:18px}
-.insight-title{font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
-.insight-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid #1E1E2E;align-items:flex-start}
-.insight-item:last-child{border-bottom:none}
-.insight-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
-.result-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #1E1E2E}
-.result-row:last-child{border-bottom:none}
-.result-label{font-size:13px;color:#6B6880}
-.result-val{font-family:'Bebas Neue',sans-serif;font-size:16px}
-.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 24px}
-.btn-grid .full{grid-column:1/-1}
-.log-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #1E1E2E}
-.log-row:last-child{border-bottom:none}
-.safe-space-note{margin:0 24px 14px;padding:12px 16px;background:#7B61FF11;border:1px solid #7B61FF33;border-radius:14px}
-.voice-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
-.rec-indicator{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:10px 14px;background:#FF4D6D11;border-radius:12px;border:1px solid #FF4D6D44;font-size:12px;color:#FF4D6D}
-textarea{width:100%;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;color:#F0EEF6;font-size:14px;padding:14px;resize:none;outline:none;line-height:1.6}
-.welcome-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-.dots{display:flex;gap:6px;margin-top:28px}
-.dot{width:8px;height:8px;border-radius:50%}
-.chart-wrap{width:100%;margin-bottom:8px}
-.mini-chart{display:flex;align-items:flex-end;gap:4px;height:80px;padding:0 4px}
-.bar{flex:1;border-radius:4px 4px 0 0;transition:height .3s;min-height:4px}
-.bar-labels{display:flex;gap:4px;padding:4px 4px 0}
-.bar-label{flex:1;text-align:center;font-size:9px;color:#6B6880}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+@keyframes scaleIn{from{transform:scale(0.93);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(26,111,160,0.25)}50%{box-shadow:0 0 40px rgba(26,111,160,0.5)}}
+.glass{background:rgba(255,255,255,0.52);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.72);box-shadow:0 8px 32px rgba(26,80,130,0.1)}
+.glass-soft{background:rgba(255,255,255,0.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,0.5)}
+.btn-blue{background:linear-gradient(135deg,#1a6fa0,#2296c4);color:#fff;border:none;border-radius:50px;padding:16px 28px;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;cursor:pointer;width:100%;box-shadow:0 4px 18px rgba(26,111,160,0.32);transition:opacity 0.2s,transform 0.1s;letter-spacing:0.01em}
+.btn-blue:active{opacity:0.85;transform:scale(0.97)}
+.btn-blue:disabled{opacity:0.5;cursor:not-allowed}
+.btn-outline{background:rgba(255,255,255,0.55);color:#1a6fa0;border:2px solid rgba(26,111,160,0.28);border-radius:50px;padding:14px 28px;font-family:'Nunito',sans-serif;font-weight:700;font-size:14px;cursor:pointer;width:100%;transition:all 0.2s}
+.btn-red{background:linear-gradient(135deg,#e63946,#ff5868);color:#fff;border:none;border-radius:50px;padding:16px 28px;font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;cursor:pointer;width:100%;box-shadow:0 4px 18px rgba(230,57,70,0.32);transition:opacity 0.2s,transform 0.1s}
+.field{width:100%;background:rgba(255,255,255,0.62);border:1.5px solid rgba(26,111,160,0.18);border-radius:14px;color:#1a3a52;font-family:'Nunito',sans-serif;font-size:15px;padding:13px 16px;outline:none;transition:border-color 0.2s}
+.field:focus{border-color:rgba(26,111,160,0.48);box-shadow:0 0 0 3px rgba(26,111,160,0.1)}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useRef,useEffect}=React;
+const {AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer}=Recharts;
 
-<script>
-// ── DATA ──────────────────────────────────────────────────────
-const PAIN_AREAS = ["Head","Neck","Shoulders","Back","Chest","Hips","Legs","Feet"];
-const TRAUMA_CHECKS = [
+const C={
+  blue:"#1a6fa0",blueMid:"#2196c4",blueLight:"#5bb8e8",
+  red:"#e63946",redLight:"#ff6877",
+  green:"#2d9a6e",teal:"#1a8c7a",
+  textDark:"#1a3a52",textMid:"#3d6480",textLight:"#6b95ad",
+  gold:"#f4a261",purple:"#7B3F9E"
+};
+
+const DAYS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const PAIN_AREAS=["Head","Neck","Shoulders","Upper Back","Lower Back","Chest","Hips","Legs","Knees","Feet"];
+const MOODS=[
+  {emoji:"😤",label:"Struggling",value:1,color:"#e63946"},
+  {emoji:"😔",label:"Low",value:2,color:"#f4a261"},
+  {emoji:"😐",label:"Neutral",value:3,color:"#f4c261"},
+  {emoji:"🙂",label:"Okay",value:4,color:"#5bb8e8"},
+  {emoji:"💪",label:"Strong",value:5,color:"#2d9a6e"},
+];
+const TRAUMA_CHECKS=[
   {id:"sleep",label:"Sleep felt disrupted or restless",icon:"🌙"},
   {id:"anxiety",label:"I felt anxious or on-edge today",icon:"⚡"},
   {id:"trigger",label:"Something triggered a stress response",icon:"🔴"},
@@ -211,698 +68,902 @@ const TRAUMA_CHECKS = [
   {id:"grounded",label:"I felt grounded and present",icon:"🌱"},
   {id:"support",label:"I reached out to someone for support",icon:"🤝"},
 ];
-const MOODS = [
-  {emoji:"😤",label:"Struggling",value:1,color:"#FF4D6D"},
-  {emoji:"😔",label:"Low",value:2,color:"#FF8C42"},
-  {emoji:"😐",label:"Neutral",value:3,color:"#FFD166"},
-  {emoji:"🙂",label:"Okay",value:4,color:"#7B61FF"},
-  {emoji:"💪",label:"Strong",value:5,color:"#00C98D"},
-];
-const AFFIRMATIONS = [
+const AFFIRMATIONS=[
   "Your pain is real. Your healing is possible.",
   "Every small step forward is still forward.",
   "You are more than your diagnosis.",
   "Rest is not giving up. Rest is rebuilding.",
   "Your body is doing its best. So are you.",
 ];
-const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-const SEED_CHAT = [
+const SEED_CHAT=[
   {id:1,user:"Maya R.",avatar:"🌸",text:"Anyone else notice their pain spikes mid-week? Wednesday always gets me.",time:"2h ago",mine:false},
   {id:2,user:"Jordan K.",avatar:"🌊",text:"Yes! Short noon rest really helps me manage that.",time:"1h ago",mine:false},
-  {id:3,user:"Sam T.",avatar:"🌿",text:"Gentle reminder: rest is not failure 💚 Proud I did my check-in today.",time:"45m ago",mine:false},
-  {id:4,user:"Alex P.",avatar:"🔥",text:"Does anyone use heat therapy? Just got a heating pad for back pain.",time:"20m ago",mine:false},
+  {id:3,user:"Sam T.",avatar:"🌿",text:"Gentle reminder: rest is not failure 💚",time:"45m ago",mine:false},
+  {id:4,user:"Alex P.",avatar:"💙",text:"Does anyone use heat therapy? Just got a heating pad for back pain.",time:"20m ago",mine:false},
 ];
+const EXERCISES=[
+  {id:"anxiety",icon:"🧘",title:"Anxiety Management",desc:"Breathing & grounding",steps:["Find a comfortable position and close your eyes.","Breathe in slowly for 4 counts.","Hold for 4 counts.","Exhale slowly for 6 counts.","Repeat 5 times, focusing only on your breath.","Name 5 things you can see around you."]},
+  {id:"goals",icon:"🎯",title:"Goal Setting",desc:"Small steps toward healing",steps:["Write one thing you'd like to improve this week.","Break it into 3 small daily actions.","Celebrate every small win — they all count.","Review each evening: did you take one step today?"]},
+  {id:"selfcare",icon:"💆",title:"Self-Care",desc:"Nurture your body & mind",steps:["Drink a full glass of water right now.","Step outside for 5 minutes of fresh air.","Put your hand on your heart and breathe deeply.","Do one kind thing for your body today."]},
+  {id:"grounding",icon:"🌍",title:"Grounding",desc:"Connect with the present",steps:["Feel your feet firmly on the floor.","Name 5 things you can see.","Name 4 things you can touch.","Name 3 things you can hear.","Name 2 things you can smell.","Name 1 thing you can taste."]},
+  {id:"mindfulness",icon:"🌸",title:"Mindfulness",desc:"Awareness without judgment",steps:["Sit comfortably and gently close your eyes.","Bring attention to your breathing — don't control it.","Notice thoughts without judging them.","Gently return focus to your breath each time.","Continue for 5–10 minutes."]},
+  {id:"emotions",icon:"💡",title:"Understanding Emotions",desc:"Identify & process feelings",steps:["Name what you are feeling right now.","Ask: where do I feel this in my body?","Is this feeling familiar?","What does this feeling need from me?","Write it down or speak it aloud."]},
+];
+const seedHistory=()=>Array.from({length:7},(_,i)=>{
+  const pain=Math.floor(Math.random()*5)+3,mood=Math.floor(Math.random()*3)+2,checks=Math.floor(Math.random()*4)+1;
+  return{id:i,date:DAYS[i],fullDate:new Date(Date.now()-(6-i)*86400000).toLocaleDateString("en-US",{month:"short",day:"numeric"}),
+    painLevel:pain,mood,checkedCount:checks,areas:[],notes:"",score:Math.round(((10-pain)*3+mood*4+checks*5)/3)};
+});
 
-function seedHistory() {
-  return Array.from({length:7},(_,i)=>{
-    const pain=Math.floor(Math.random()*5)+3, mood=Math.floor(Math.random()*3)+2, checks=Math.floor(Math.random()*4)+1;
-    return {id:i,date:DAYS[i],fullDate:new Date(Date.now()-(6-i)*86400000).toLocaleDateString("en-US",{month:"short",day:"numeric"}),
-      painLevel:pain,mood,checkedCount:checks,notes:"",
-      score:Math.round(((10-pain)*3+mood*4+checks*5)/3)};
-  });
-}
+/* ── Logo SVG ── */
+const Logo=({size=56})=>(
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
+    <defs>
+      <radialGradient id="bgrad" cx="35%" cy="35%"><stop offset="0%" stopColor="#5bb8e8"/><stop offset="100%" stopColor="#1a6fa0"/></radialGradient>
+      <radialGradient id="rgrad" cx="50%" cy="40%"><stop offset="0%" stopColor="#ff8a8a"/><stop offset="100%" stopColor="#c0392b"/></radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="47" fill="url(#bgrad)" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/>
+    <ellipse cx="50" cy="30" rx="9" ry="10" fill="url(#rgrad)"/>
+    <path d="M33 68 Q39 46 50 44 Q61 46 67 68Z" fill="url(#rgrad)"/>
+    <circle cx="50" cy="52" r="7" fill="rgba(255,140,100,0.55)"/>
+    <path d="M17 56 Q24 36 37 49 Q29 55 27 66 Q18 69 17 56Z" fill="#2196c4" opacity="0.9"/>
+    <path d="M19 53 Q27 45 35 51" stroke="#7dd4f5" strokeWidth="2" fill="none"/>
+    <path d="M20 58 Q28 50 36 55" stroke="#7dd4f5" strokeWidth="1.5" fill="none"/>
+    <path d="M83 56 Q76 36 63 49 Q71 55 73 66 Q82 69 83 56Z" fill="#2d9a6e" opacity="0.9"/>
+    <path d="M81 53 Q73 45 65 51" stroke="#5cd4a0" strokeWidth="2" fill="none"/>
+    <path d="M80 58 Q72 50 64 55" stroke="#5cd4a0" strokeWidth="1.5" fill="none"/>
+    <ellipse cx="38" cy="22" rx="11" ry="7" fill="rgba(255,255,255,0.22)" transform="rotate(-22 38 22)"/>
+  </svg>
+);
 
-// ── STATE ─────────────────────────────────────────────────────
-const state = {
-  authStep: "login",
-  currentUser: null,
-  verifyData: null,
-  tab: "checkin",
-  screen: "form",
-  history: seedHistory(),
-  painLevel: 5,
-  selectedAreas: [],
-  traumaChecks: {},
-  mood: null,
-  notes: "",
-  affIdx: Math.floor(Math.random()*AFFIRMATIONS.length),
-  isListening: false,
-  voiceStatus: "",
-  chatMessages: [...SEED_CHAT],
-  chatInput: "",
-  chatName: "You",
-  aiInsights: null,
-  aiLoading: false,
-  pdfLoading: false,
-  loginEmail: "", loginPass: "", loginErrors: {}, loginLoading: false,
-  regName: "", regEmail: "", regPass: "", regConfirm: "", regAgreed: false, regErrors: {}, regLoading: false,
-  verifyInput: ["","","","","",""], verifyError: "", verifyLoading: false,
-  selectedPlan: "monthly", subscribeLoading: false,
-  recognition: null,
+/* ── Primitives ── */
+const GCard=({children,style={}})=>(
+  <div className="glass" style={{borderRadius:20,padding:22,margin:"0 18px 16px",...style}}>{children}</div>
+);
+const SectionTitle=({icon,title,sub})=>(
+  <div style={{padding:"18px 22px 4px",animation:"fadeIn 0.4s ease both"}}>
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:2}}>
+      {icon&&<span style={{fontSize:22}}>{icon}</span>}
+      <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:21,fontWeight:800,color:C.textDark,letterSpacing:"-0.01em"}}>{title}</div>
+    </div>
+    {sub&&<div style={{fontSize:12,color:C.textLight,paddingLeft:icon?32:0,marginTop:3}}>{sub}</div>}
+  </div>
+);
+const BottomNav=({tab,setTab})=>{
+  const items=[{id:"home",icon:"🏠",label:"Home"},{id:"pain",icon:"🩺",label:"Pain"},{id:"trauma",icon:"🧠",label:"Recovery"},{id:"community",icon:"💬",label:"Community"},{id:"profile",icon:"👤",label:"Profile"}];
+  return(
+    <div className="glass" style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,display:"flex",justifyContent:"space-around",padding:"8px 0 max(10px,env(safe-area-inset-bottom))",zIndex:100,borderRadius:"20px 20px 0 0",borderBottom:"none",boxShadow:"0 -4px 20px rgba(26,80,130,0.1)"}}>
+      {items.map(t=>(
+        <button key={t.id} onClick={()=>setTab(t.id)}
+          style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",color:tab===t.id?C.blue:C.textLight,fontSize:9,fontWeight:tab===t.id?800:600,textTransform:"uppercase",letterSpacing:"0.04em",border:"none",background:"transparent",padding:"4px 8px",transition:"color 0.2s",minWidth:0}}>
+          <span style={{fontSize:tab===t.id?22:19,transition:"font-size 0.2s"}}>{t.icon}</span>
+          {t.label}
+          {tab===t.id&&<div style={{width:4,height:4,borderRadius:"50%",background:C.blue}}/>}
+        </button>
+      ))}
+    </div>
+  );
+};
+const AppShell=({children,tab,setTab,user,onLogout})=>(
+  <div style={{background:"transparent",minHeight:"100vh",maxWidth:430,margin:"0 auto",color:C.textDark,overflowX:"hidden"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"max(18px,env(safe-area-inset-top)) 18px 8px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <Logo size={30}/>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:15}}>
+          <span style={{color:C.red}}>Pain</span><span style={{color:C.blue}}>2</span><span style={{color:C.teal}}>Care</span>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:6,alignItems:"center"}}>
+        <div className="glass-soft" style={{borderRadius:18,padding:"4px 11px",fontSize:12,fontWeight:700,color:C.textMid}}>
+          {user?.name?.split(" ")[0]||"You"}
+        </div>
+        <button onClick={onLogout} className="glass-soft" style={{borderRadius:18,padding:"4px 11px",fontSize:11,fontWeight:700,color:C.textLight,border:"none",cursor:"pointer"}}>Out</button>
+      </div>
+    </div>
+    <div style={{overflowY:"auto",maxHeight:"100vh",paddingBottom:88}}>{children}</div>
+    <BottomNav tab={tab} setTab={setTab}/>
+  </div>
+);
+
+/* ══ AUTH ══ */
+const AuthShell=({children})=>(
+  <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",background:"linear-gradient(160deg,#daf0ff 0%,#b4dcf5 30%,#c6e8f8 65%,#dbf0ff 100%)",overflowX:"hidden",position:"relative"}}>
+    <div style={{position:"fixed",top:-90,right:-90,width:260,height:260,borderRadius:"50%",background:"radial-gradient(circle,rgba(26,111,160,0.18),transparent 70%)",pointerEvents:"none"}}/>
+    <div style={{position:"fixed",bottom:-70,left:-70,width:210,height:210,borderRadius:"50%",background:"radial-gradient(circle,rgba(45,154,110,0.13),transparent 70%)",pointerEvents:"none"}}/>
+    <div style={{overflowY:"auto",maxHeight:"100vh",padding:"0 24px 48px"}}>
+      <div style={{textAlign:"center",padding:"44px 0 14px",animation:"fadeIn 0.5s ease both"}}>
+        <div style={{display:"inline-block",animation:"float 3s ease-in-out infinite"}}><Logo size={70}/></div>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:27,fontWeight:800,marginTop:12}}>
+          <span style={{color:C.red}}>Pain</span><span style={{color:C.blue}}>2</span><span style={{color:C.teal}}>Care</span>
+        </div>
+        <div style={{fontSize:11,color:C.textLight,letterSpacing:"0.12em",textTransform:"uppercase",marginTop:4}}>Chronic Pain &amp; Trauma Recovery</div>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
+const LoginScreen=({onLogin,onGoRegister})=>{
+  const [email,setEmail]=useState(""); const [pass,setPass]=useState("");
+  const [errors,setErrors]=useState({}); const [loading,setLoading]=useState(false);
+  const doLogin=async()=>{
+    const e={};
+    if(!email.includes("@")) e.email="Enter a valid email";
+    if(pass.length<6) e.pass="Min 6 characters";
+    if(Object.keys(e).length){setErrors(e);return;}
+    setLoading(true); await new Promise(r=>setTimeout(r,800));
+    const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
+    const user=users.find(u=>u.email===email&&u.password===pass);
+    if(!user){setErrors({pass:"Incorrect email or password"});setLoading(false);return;}
+    onLogin(user); setLoading(false);
+  };
+  return(
+    <div style={{animation:"fadeIn 0.5s ease both"}}>
+      <div style={{marginBottom:24}}>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:22,fontWeight:800,color:C.textDark}}>Welcome Back 👋</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:4}}>Sign in to continue your healing journey</div>
+      </div>
+      {[{label:"Username / Email",key:"email",type:"email",val:email,set:setEmail,ph:"you@email.com",err:errors.email},
+        {label:"Password",key:"pass",type:"password",val:pass,set:setPass,ph:"••••••••",err:errors.pass}
+      ].map(f=>(
+        <div key={f.key} style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.09em",marginBottom:5}}>{f.label}</div>
+          <input className="field" type={f.type} value={f.val} onChange={e=>f.set(e.target.value)} placeholder={f.ph}/>
+          {f.err&&<div style={{fontSize:11,color:C.red,marginTop:3}}>⚠ {f.err}</div>}
+        </div>
+      ))}
+      <div style={{textAlign:"right",marginBottom:22}}><span style={{fontSize:12,color:C.blue,fontWeight:700,cursor:"pointer"}}>Forgot Password?</span></div>
+      <button className="btn-blue" onClick={doLogin} disabled={loading}>{loading?"Signing in…":"Sign In →"}</button>
+      <div style={{textAlign:"center",marginTop:18,fontSize:13,color:C.textLight}}>
+        Don't have an account?{" "}<span onClick={onGoRegister} style={{color:C.blue,fontWeight:800,cursor:"pointer"}}>Register</span>
+      </div>
+    </div>
+  );
 };
 
-// Check session
-try {
-  const s = sessionStorage.getItem("rt_session");
-  if(s) { state.currentUser = JSON.parse(s); state.authStep = "app"; state.chatName = state.currentUser.name || "You"; }
-} catch(e){}
-
-// ── RENDER ENGINE ─────────────────────────────────────────────
-function $(id){ return document.getElementById(id); }
-function render() {
-  const app = document.getElementById("app");
-  if(!app) return;
-  app.innerHTML = getHTML();
-  bindEvents();
-  scrollToBottom();
-}
-
-function scoreColor(s){ return s>=20?"#00C98D":s>=12?"#FF8C42":"#FF4D6D"; }
-function painColor(p){ return p<=3?"#00C98D":p<=6?"#FF8C42":"#FF4D6D"; }
-function painLabel(p){ return ["None","Minimal","Minimal","Mild","Mild","Moderate","Moderate","Severe","Severe","Intense","Intense"][p]; }
-function daysLeft(user){ return Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000)); }
-function isPaid(user){ return user?.plan==="monthly"||user?.plan==="annual"; }
-
-// ── HTML BUILDERS ─────────────────────────────────────────────
-function navHTML(activeTab) {
-  return `<nav class="nav">
-    ${[["checkin","✅","Check-In"],["history","📈","Trends"],["insights","🤖","AI"],["community","💬","Community"]].map(([id,icon,label])=>
-      `<button class="${activeTab===id?'active':''}" onclick="switchTab('${id}')">${icon}<span style="display:block">${label}</span></button>`
-    ).join("")}
-  </nav>`;
-}
-
-function headerHTML(user) {
-  return `<div style="padding:max(18px,env(safe-area-inset-top,18px)) 24px 0;display:flex;justify-content:space-between;align-items:center">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FF4D6D;letter-spacing:.08em">🔥 RiseThrough</div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:11px;color:#6B6880">${user?.name||""}</span>
-      <button onclick="logout()" style="font-size:10px;color:#6B6880;background:transparent;border:1px solid #1E1E2E;border-radius:8px;padding:4px 10px;cursor:pointer;text-transform:uppercase">Out</button>
+const RegisterScreen=({onGoLogin,onRegistered})=>{
+  const [name,setName]=useState(""); const [email,setEmail]=useState("");
+  const [pass,setPass]=useState(""); const [confirm,setConfirm]=useState("");
+  const [dob,setDob]=useState(""); const [gender,setGender]=useState("");
+  const [agreed,setAgreed]=useState(false); const [errors,setErrors]=useState({});
+  const [loading,setLoading]=useState(false); const [showTerms,setShowTerms]=useState(false);
+  const doRegister=async()=>{
+    const e={};
+    if(name.trim().length<2) e.name="Enter your full name";
+    if(!email.includes("@")) e.email="Enter a valid email";
+    if(pass.length<6) e.pass="Min 6 characters";
+    if(pass!==confirm) e.confirm="Passwords don't match";
+    if(!agreed) e.agreed="Please accept the terms";
+    if(Object.keys(e).length){setErrors(e);return;}
+    setLoading(true); await new Promise(r=>setTimeout(r,900));
+    const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
+    if(users.find(u=>u.email===email)){setErrors({email:"Already registered"});setLoading(false);return;}
+    const code=Math.floor(100000+Math.random()*900000).toString();
+    const newUser={name:name.trim(),email,password:pass,dob,gender,verified:false,verifyCode:code,trialStart:Date.now(),plan:"trial",silhouette:1};
+    users.push(newUser); localStorage.setItem("p2c_users",JSON.stringify(users));
+    setLoading(false); onRegistered({email,code,name:name.trim()});
+  };
+  if(showTerms) return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:19,fontWeight:800,color:C.textDark,marginBottom:14}}>Terms &amp; Conditions</div>
+      <div className="glass" style={{borderRadius:16,padding:18,maxHeight:"52vh",overflowY:"auto",marginBottom:18,fontSize:13,lineHeight:1.7,color:C.textMid}}>
+        <p><strong>1. Acceptance</strong><br/>By using Pain2Care, you agree to these Terms.</p><br/>
+        <p><strong>2. Not Medical Advice</strong><br/>Pain2Care is a self-tracking tool only — not a medical device or diagnosis tool. Always consult a qualified healthcare provider.</p><br/>
+        <p><strong>3. Privacy</strong><br/>Your health data is stored securely. We never sell your personal data to third parties.</p><br/>
+        <p><strong>4. Free Trial</strong><br/>A 7-day free trial is provided. After the trial, a subscription is required to continue using the app.</p><br/>
+        <p><strong>5. Community</strong><br/>The community chat is anonymous and supportive. Harmful or abusive content is not permitted.</p><br/>
+        <p><strong>6. Limitation of Liability</strong><br/>Pain2Care is not liable for any decisions made based on app data.</p><br/>
+        <p><strong>7. Changes</strong><br/>We may update these terms with notice via the app.</p>
+      </div>
+      <div onClick={()=>setAgreed(!agreed)} style={{display:"flex",alignItems:"center",gap:12,marginBottom:18,padding:"12px 14px",background:"rgba(26,111,160,0.07)",borderRadius:13,cursor:"pointer"}}>
+        <div style={{width:22,height:22,borderRadius:6,border:`2px solid ${agreed?C.blue:"rgba(26,111,160,0.28)"}`,background:agreed?C.blue:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+          {agreed&&<span style={{color:"#fff",fontSize:13,fontWeight:900}}>✓</span>}
+        </div>
+        <span style={{fontSize:13,color:C.textMid,fontWeight:600}}>I agree to the Terms &amp; Conditions</span>
+      </div>
+      <button className="btn-blue" onClick={()=>setShowTerms(false)} disabled={!agreed}>Continue →</button>
     </div>
-  </div>`;
-}
-
-function trialBannerHTML() {
-  if(!state.currentUser||isPaid(state.currentUser)) return "";
-  const dl = daysLeft(state.currentUser);
-  if(dl===0) return "";
-  return `<div class="trial-banner" onclick="switchTab('paywall')">
-    <span style="font-size:16px">⏳</span>
-    <div style="flex:1"><div style="font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:.06em;color:#FFD166">${dl} DAYS LEFT IN FREE TRIAL</div>
-    <div style="font-size:11px;color:#6B6880">Tap to upgrade</div></div>
-    <span style="color:#FFD166">→</span>
-  </div>`;
-}
-
-function heroHTML(accent, title, sub, accentColor="#FF4D6D") {
-  return `<div class="hero"><h1><span style="color:${accentColor}">${accent}</span><br>${title}</h1><p>${sub}</p></div>`;
-}
-
-function miniBarChart(data, key, color) {
-  const max = Math.max(...data.map(d=>d[key]),1);
-  const bars = data.map(d=>`<div class="bar" style="background:${color};opacity:.8;height:${Math.max(8,Math.round((d[key]/max)*72))}px"></div>`).join("");
-  const labels = data.map(d=>`<div class="bar-label">${d.day}</div>`).join("");
-  return `<div class="mini-chart">${bars}</div><div class="bar-labels">${labels}</div>`;
-}
-
-// ── AUTH SCREENS ──────────────────────────────────────────────
-function loginHTML() {
-  const e = state.loginErrors;
-  return `<div class="auth-shell">
-    <div class="auth-blob1"></div><div class="auth-blob2"></div>
-    <div class="auth-logo"><span class="fire">🔥</span><h1>RISETHROUGH</h1><p>Chronic Pain & Trauma Recovery</p></div>
-    <div style="margin-top:32px;margin-bottom:28px;animation:fadeIn .5s ease both">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;text-transform:uppercase"><span style="color:#FF4D6D">Welcome</span><br>Back</div>
-      <p style="font-size:13px;color:#6B6880;margin-top:6px">Sign in to continue your healing journey</p>
-    </div>
-    <div class="input-wrap">
-      <label>Email</label>
-      <div class="field-wrap"><span class="icon">✉️</span>
-        <input id="li-email" class="with-icon ${e.email?'error':''}" type="email" placeholder="you@email.com" value="${state.loginEmail}" oninput="state.loginEmail=this.value"/>
-      </div>${e.email?`<div class="err-msg">⚠ ${e.email}</div>`:""}
-    </div>
-    <div class="input-wrap">
-      <label>Password</label>
-      <div class="field-wrap"><span class="icon">🔒</span>
-        <input id="li-pass" class="with-icon ${e.pass?'error':''}" type="password" placeholder="••••••••" value="${state.loginPass}" oninput="state.loginPass=this.value"/>
-      </div>${e.pass?`<div class="err-msg">⚠ ${e.pass}</div>`:""}
-    </div>
-    <div style="text-align:right;margin-bottom:20px;margin-top:-8px"><span style="font-size:12px;color:#7B61FF;cursor:pointer">Forgot password?</span></div>
-    <button class="btn" style="background:#FF4D6D" onclick="doLogin()" ${state.loginLoading?"disabled":""}>${state.loginLoading?"Signing in…":"Sign In →"}</button>
-    <p style="text-align:center;margin-top:24px;font-size:13px;color:#6B6880">No account? <span style="color:#7B61FF;cursor:pointer;font-weight:600" onclick="switchAuth('register')">Create one free</span></p>
-  </div>`;
-}
-
-function registerHTML() {
-  const e = state.regErrors;
-  const s = state.regPass.length===0?0:state.regPass.length<6?1:state.regPass.length<10?2:3;
-  const sc = ["#1E1E2E","#FF4D6D","#FF8C42","#00C98D"][s];
-  const sl = ["","Weak","Fair","Strong"][s];
-  return `<div class="auth-shell">
-    <div class="auth-blob1"></div><div class="auth-blob2"></div>
-    <div class="auth-logo"><span class="fire">🔥</span><h1>RISETHROUGH</h1><p>Chronic Pain & Trauma Recovery</p></div>
-    <div style="margin-top:24px;animation:fadeIn .5s ease both">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;text-transform:uppercase"><span style="color:#FF4D6D">Start</span><br>Your Journey</div>
-      <p style="font-size:13px;color:#6B6880;margin-top:6px;margin-bottom:20px">Free for 7 days · No credit card needed</p>
-      <div style="background:linear-gradient(135deg,#7B61FF22,#FF4D6D11);border:1px solid #7B61FF44;border-radius:16px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px">
-        <span style="font-size:28px">🎁</span>
-        <div><div style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:.06em;color:#7B61FF">7-DAY FREE TRIAL</div>
-        <div style="font-size:12px;color:#6B6880;margin-top:2px">Then €4.99/month or €49.99/year.</div></div>
+  );
+  return(
+    <div style={{animation:"fadeIn 0.5s ease both"}}>
+      <div style={{marginBottom:18}}>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:21,fontWeight:800,color:C.textDark}}>Create Account</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:3}}>Start your free 7-day trial</div>
+      </div>
+      {[{label:"Full Name",key:"name",val:name,set:setName,type:"text",ph:"Your full name",err:errors.name},
+        {label:"Email",key:"email",val:email,set:setEmail,type:"email",ph:"you@email.com",err:errors.email},
+        {label:"Date of Birth",key:"dob",val:dob,set:setDob,type:"date",ph:"",err:null},
+      ].map(f=>(
+        <div key={f.key} style={{marginBottom:13}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>{f.label}</div>
+          <input className="field" type={f.type} value={f.val} onChange={e=>f.set(e.target.value)} placeholder={f.ph}/>
+          {f.err&&<div style={{fontSize:11,color:C.red,marginTop:3}}>⚠ {f.err}</div>}
+        </div>
+      ))}
+      <div style={{marginBottom:13}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>Gender</div>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {["Female","Male","Other","Prefer not to say"].map(g=>(
+            <div key={g} onClick={()=>setGender(g)}
+              style={{flex:"1 0 40%",padding:"9px 6px",borderRadius:11,border:`1.5px solid ${gender===g?C.blue:"rgba(26,111,160,0.18)"}`,background:gender===g?"rgba(26,111,160,0.1)":"rgba(255,255,255,0.5)",cursor:"pointer",textAlign:"center",fontSize:12,fontWeight:700,color:gender===g?C.blue:C.textLight,transition:"all 0.15s"}}>
+              {g}
+            </div>
+          ))}
+        </div>
+      </div>
+      {[{label:"Password",key:"pass",val:pass,set:setPass,err:errors.pass},
+        {label:"Confirm Password",key:"confirm",val:confirm,set:setConfirm,err:errors.confirm}
+      ].map(f=>(
+        <div key={f.key} style={{marginBottom:13}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>{f.label}</div>
+          <input className="field" type="password" value={f.val} onChange={e=>f.set(e.target.value)} placeholder="••••••••"/>
+          {f.err&&<div style={{fontSize:11,color:C.red,marginTop:3}}>⚠ {f.err}</div>}
+        </div>
+      ))}
+      <div onClick={()=>setShowTerms(true)} style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,cursor:"pointer",padding:"11px 13px",background:"rgba(26,111,160,0.06)",borderRadius:11}}>
+        <div style={{width:20,height:20,borderRadius:5,border:`2px solid ${agreed?C.blue:"rgba(26,111,160,0.28)"}`,background:agreed?C.blue:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+          {agreed&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+        </div>
+        <span style={{fontSize:12,color:C.textMid}}>I agree to the <span style={{color:C.blue,fontWeight:700}}>Terms &amp; Conditions</span></span>
+      </div>
+      {errors.agreed&&<div style={{fontSize:11,color:C.red,marginBottom:10}}>⚠ {errors.agreed}</div>}
+      <button className="btn-blue" onClick={doRegister} disabled={loading}>{loading?"Creating…":"Create Account →"}</button>
+      <div style={{textAlign:"center",marginTop:14,fontSize:13,color:C.textLight}}>
+        Already have an account?{" "}<span onClick={onGoLogin} style={{color:C.blue,fontWeight:800,cursor:"pointer"}}>Sign In</span>
       </div>
     </div>
-    <div class="input-wrap"><label>Full Name</label><div class="field-wrap"><span class="icon">👤</span>
-      <input class="with-icon ${e.name?'error':''}" type="text" placeholder="Your name" value="${state.regName}" oninput="state.regName=this.value"/>
-    </div>${e.name?`<div class="err-msg">⚠ ${e.name}</div>`:""}</div>
-    <div class="input-wrap"><label>Email</label><div class="field-wrap"><span class="icon">✉️</span>
-      <input class="with-icon ${e.email?'error':''}" type="email" placeholder="you@email.com" value="${state.regEmail}" oninput="state.regEmail=this.value"/>
-    </div>${e.email?`<div class="err-msg">⚠ ${e.email}</div>`:""}</div>
-    <div class="input-wrap"><label>Password</label><div class="field-wrap"><span class="icon">🔒</span>
-      <input class="with-icon ${e.pass?'error':''}" type="password" placeholder="Min 6 characters" value="${state.regPass}" oninput="state.regPass=this.value;render()"/>
-    </div>${e.pass?`<div class="err-msg">⚠ ${e.pass}</div>`:""}</div>
-    ${state.regPass.length>0?`<div style="margin-top:-10px;margin-bottom:14px">
-      <div class="strength-bars">${[1,2,3].map(i=>`<div class="strength-bar" style="background:${i<=s?sc:'#1E1E2E'}"></div>`).join("")}</div>
-      <div style="font-size:11px;color:${sc}">${sl}</div>
-    </div>`:""}
-    <div class="input-wrap"><label>Confirm Password</label><div class="field-wrap"><span class="icon">🔐</span>
-      <input class="with-icon ${e.confirm?'error':''}" type="password" placeholder="Repeat password" value="${state.regConfirm}" oninput="state.regConfirm=this.value"/>
-    </div>${e.confirm?`<div class="err-msg">⚠ ${e.confirm}</div>`:""}</div>
-    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:24px;cursor:pointer" onclick="state.regAgreed=!state.regAgreed;render()">
-      <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${state.regAgreed?'#7B61FF':'#6B6880'};background:${state.regAgreed?'#7B61FF':'transparent'};flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:2px;transition:all .2s;font-size:12px;color:#fff">${state.regAgreed?"✓":""}</div>
-      <div style="font-size:12px;color:#6B6880;line-height:1.5">I agree to the <span style="color:#7B61FF">Terms of Service</span> and <span style="color:#7B61FF">Privacy Policy</span>.</div>
-    </div>
-    ${e.agreed?`<div style="font-size:11px;color:#FF4D6D;margin-top:-18px;margin-bottom:14px">⚠ ${e.agreed}</div>`:""}
-    <button class="btn" style="background:#FF4D6D" onclick="doRegister()" ${state.regLoading?"disabled":""}>${state.regLoading?"Creating account…":"Create Free Account →"}</button>
-    <p style="text-align:center;margin-top:24px;font-size:13px;color:#6B6880">Have an account? <span style="color:#7B61FF;cursor:pointer;font-weight:600" onclick="switchAuth('login')">Sign in</span></p>
-  </div>`;
-}
+  );
+};
 
-function verifyHTML() {
-  return `<div class="auth-shell">
-    <div class="auth-blob1"></div><div class="auth-blob2"></div>
-    <div class="auth-logo"><span class="fire">🔥</span><h1>RISETHROUGH</h1></div>
-    <div style="margin-top:24px;animation:fadeIn .5s ease both">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;text-transform:uppercase"><span style="color:#FF4D6D">Verify</span><br>Your Email</div>
-      <p style="font-size:14px;color:#6B6880;margin-top:8px;margin-bottom:24px;line-height:1.6">We sent a 6-digit code to <strong style="color:#F0EEF6">${state.verifyData?.email}</strong></p>
-      <div style="background:#7B61FF11;border:1px solid #7B61FF33;border-radius:12px;padding:10px 14px;margin-bottom:20px;font-size:12px;color:#7B61FF">
-        💡 Demo mode: your code is <strong>${state.verifyData?.code}</strong>
+const VerifyScreen=({email,code,onVerified,onBack})=>{
+  const [input,setInput]=useState(["","","","","",""]);
+  const [error,setError]=useState(""); const [loading,setLoading]=useState(false);
+  const refs=useRef([]);
+  const handleInput=(i,v)=>{if(!/^\d?$/.test(v))return;const n=[...input];n[i]=v;setInput(n);if(v&&i<5)refs.current[i+1]?.focus();};
+  const handleKey=(i,e)=>{if(e.key==="Backspace"&&!input[i]&&i>0)refs.current[i-1]?.focus();};
+  const verify=async()=>{
+    const entered=input.join("");if(entered.length<6){setError("Enter all 6 digits");return;}
+    setLoading(true); await new Promise(r=>setTimeout(r,700));
+    if(entered===code){
+      const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
+      const idx=users.findIndex(u=>u.email===email);
+      if(idx>=0){users[idx].verified=true;localStorage.setItem("p2c_users",JSON.stringify(users));}
+      onVerified();
+    } else {setError("Incorrect code. Try again.");}
+    setLoading(false);
+  };
+  return(
+    <div style={{animation:"fadeIn 0.5s ease both"}}>
+      <div style={{marginBottom:18}}>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:20,fontWeight:800,color:C.textDark}}>Verify Your Email ✉️</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:5,lineHeight:1.6}}>We sent a 6-digit code to <strong style={{color:C.textDark}}>{email}</strong></div>
+      </div>
+      <div className="glass-soft" style={{borderRadius:13,padding:"11px 15px",marginBottom:18,fontSize:12,color:C.blue,fontWeight:700}}>
+        💡 Demo mode — your code is: <strong>{code}</strong>
+      </div>
+      <div style={{display:"flex",gap:8,justifyContent:"center",marginBottom:18}}>
+        {input.map((v,i)=>(
+          <input key={i} ref={el=>refs.current[i]=el} value={v} maxLength={1}
+            onChange={e=>handleInput(i,e.target.value)} onKeyDown={e=>handleKey(i,e)}
+            style={{width:42,height:54,textAlign:"center",background:"rgba(255,255,255,0.7)",border:`2px solid ${v?C.blue:"rgba(26,111,160,0.2)"}`,borderRadius:13,color:C.textDark,fontFamily:"'Montserrat',sans-serif",fontSize:22,fontWeight:800,outline:"none"}}/>
+        ))}
+      </div>
+      {error&&<div style={{fontSize:12,color:C.red,textAlign:"center",marginBottom:11}}>⚠ {error}</div>}
+      <button className="btn-blue" onClick={verify} disabled={loading}>{loading?"Verifying…":"Verify & Continue →"}</button>
+      <div style={{textAlign:"center",marginTop:12}}><span onClick={onBack} style={{fontSize:12,color:C.textLight,cursor:"pointer"}}>← Back</span></div>
+    </div>
+  );
+};
+
+const SilhouetteScreen=({onContinue})=>{
+  const [sel,setSel]=useState(2);
+  const opts=[{id:1,icon:"🧍‍♀️",label:"Slim",desc:"Slender build"},{id:2,icon:"🧍‍♂️",label:"Average",desc:"Average build"},{id:3,icon:"🧍",label:"Large",desc:"Larger build"}];
+  return(
+    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",padding:"0 24px 48px",background:"linear-gradient(160deg,#daf0ff,#b4dcf5,#dbf0ff)"}}>
+      <div style={{textAlign:"center",padding:"36px 0 20px"}}><Logo size={56}/>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:19,fontWeight:800,color:C.textDark,marginTop:12}}>Choose Your Silhouette</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:5}}>For accurate pain body mapping</div>
+      </div>
+      <div style={{display:"flex",gap:12,marginBottom:28}}>
+        {opts.map(o=>(
+          <div key={o.id} onClick={()=>setSel(o.id)}
+            className={sel===o.id?"glass":"glass-soft"}
+            style={{flex:1,padding:"18px 10px",borderRadius:18,textAlign:"center",cursor:"pointer",border:`2px solid ${sel===o.id?C.blue:"transparent"}`,transition:"all 0.2s"}}>
+            <div style={{fontSize:42,marginBottom:8}}>{o.icon}</div>
+            <div style={{fontWeight:800,fontSize:13,color:sel===o.id?C.blue:C.textMid}}>{o.label}</div>
+            <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{o.desc}</div>
+          </div>
+        ))}
+      </div>
+      <button className="btn-blue" onClick={()=>onContinue(sel)}>Continue →</button>
+    </div>
+  );
+};
+
+const WelcomeScreen=({user,onContinue})=>{
+  useEffect(()=>{const t=setTimeout(onContinue,3000);return()=>clearTimeout(t);},[]);
+  return(
+    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,background:"linear-gradient(160deg,#daf0ff,#b4dcf5,#dbf0ff)"}}>
+      <div style={{animation:"float 2s ease-in-out infinite"}}><Logo size={76}/></div>
+      <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:26,fontWeight:800,color:C.blue,marginTop:18,textAlign:"center"}}>You're In! 🎉</div>
+      <div style={{fontSize:15,color:C.textMid,marginTop:10,textAlign:"center",lineHeight:1.7}}>Welcome, <strong>{user?.name}</strong>.<br/>Your 7-day free trial starts now.</div>
+      <div style={{fontSize:13,color:C.textLight,marginTop:10}}>Taking you to your dashboard…</div>
+      <div style={{marginTop:22,display:"flex",gap:6}}>
+        {[0,1,2].map(i=><div key={i} style={{width:8,height:8,borderRadius:"50%",background:i===0?C.blue:"rgba(26,111,160,0.2)",animation:`pulse 1.2s ease ${i*0.3}s infinite`}}/>)}
       </div>
     </div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:20px">
-      ${state.verifyInput.map((v,i)=>`<input class="digit-input ${v?'filled':''}" id="d${i}" maxlength="1" type="tel" value="${v}" oninput="handleDigit(${i},this.value)" onkeydown="handleDigitKey(${i},event)"/>`).join("")}
-    </div>
-    ${state.verifyError?`<p style="font-size:12px;color:#FF4D6D;text-align:center;margin-bottom:12px">⚠ ${state.verifyError}</p>`:""}
-    <button class="btn" style="background:#FF4D6D" onclick="doVerify()" ${state.verifyLoading?"disabled":""}>${state.verifyLoading?"Verifying…":"Verify & Continue →"}</button>
-    <p style="text-align:center;margin-top:16px"><span style="font-size:12px;color:#6B6880;cursor:pointer" onclick="switchAuth('register')">← Back</span></p>
-  </div>`;
-}
+  );
+};
 
-function welcomeHTML() {
-  return `<div class="welcome-screen">
-    <span style="font-size:80px;animation:float 2s ease-in-out infinite;display:block">🔥</span>
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:.1em;color:#FF4D6D;margin-top:16px">YOU'RE IN!</div>
-    <p style="font-size:16px;margin-top:8px;line-height:1.6">Welcome, <strong>${state.currentUser?.name}</strong>.<br>Your 7-day free trial starts now.</p>
-    <p style="font-size:13px;color:#6B6880;margin-top:12px">Taking you to your dashboard…</p>
-    <div class="dots">${[0,1,2].map(i=>`<div class="dot" style="background:${i===0?'#FF4D6D':'#1E1E2E'};animation:pulse 1.2s ease ${i*.3}s infinite"></div>`).join("")}</div>
-  </div>`;
-}
+const PaywallScreen=({user,onSubscribe,onLogout})=>{
+  const [plan,setPlan]=useState("monthly"); const [loading,setLoading]=useState(false);
+  const daysLeft=Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  const doSub=async()=>{
+    setLoading(true); await new Promise(r=>setTimeout(r,1200));
+    const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
+    const idx=users.findIndex(u=>u.email===user.email);
+    if(idx>=0){users[idx].plan=plan;localStorage.setItem("p2c_users",JSON.stringify(users));}
+    onSubscribe(plan); setLoading(false);
+  };
+  return(
+    <div style={{minHeight:"100vh",maxWidth:430,margin:"0 auto",padding:"0 22px 48px",background:"linear-gradient(160deg,#daf0ff,#b4dcf5,#dbf0ff)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"max(18px,env(safe-area-inset-top)) 0 0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}><Logo size={26}/>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:14}}><span style={{color:C.red}}>Pain</span><span style={{color:C.blue}}>2</span><span style={{color:C.teal}}>Care</span></div>
+        </div>
+        <button onClick={onLogout} style={{fontSize:11,fontWeight:700,color:C.textLight,background:"rgba(255,255,255,0.5)",border:"1px solid rgba(26,111,160,0.2)",borderRadius:18,padding:"5px 11px",cursor:"pointer"}}>Log Out</button>
+      </div>
+      <div style={{textAlign:"center",padding:"24px 0 14px"}}>
+        <div style={{fontSize:44}}>✨</div>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:24,fontWeight:800,color:C.textDark,marginTop:8}}>Unlock Full Access</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:6,lineHeight:1.6}}>Continue your healing journey.</div>
+      </div>
+      {daysLeft>0&&<div className="glass" style={{borderRadius:14,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
+        <span style={{fontSize:18}}>⏳</span>
+        <div><div style={{fontWeight:800,fontSize:13,color:C.gold}}>{daysLeft} Days Left in Free Trial</div>
+        <div style={{fontSize:11,color:C.textLight}}>Your trial ends soon</div></div>
+      </div>}
+      <div style={{marginBottom:18}}>
+        {[["✅","Unlimited check-ins"],["📈","Trends & AI insights"],["🩺","Pain body heat map"],["💬","Community chat"],["📸","Secure documentation"],["📄","PDF health reports"]].map(([icon,text])=>(
+          <div key={text} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:"1px solid rgba(26,111,160,0.08)"}}>
+            <span style={{fontSize:15}}>{icon}</span>
+            <span style={{fontSize:13,fontWeight:600,color:C.textMid}}>{text}</span>
+            <div style={{marginLeft:"auto",width:17,height:17,borderRadius:"50%",background:C.green,display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <span style={{color:"#fff",fontSize:10,fontWeight:900}}>✓</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="glass" style={{borderRadius:15,padding:5,display:"flex",gap:5,marginBottom:18}}>
+        {[{id:"monthly",label:"Monthly",price:"€4.99",sub:"/month"},{id:"annual",label:"Annual",price:"€49.99",sub:"/year · Save 17%"}].map(p=>(
+          <div key={p.id} onClick={()=>setPlan(p.id)}
+            style={{flex:1,padding:"13px 8px",borderRadius:11,textAlign:"center",cursor:"pointer",background:plan===p.id?"rgba(26,111,160,0.88)":"transparent",transition:"all 0.2s"}}>
+            <div style={{fontWeight:800,fontSize:12,color:plan===p.id?"#fff":C.textMid}}>{p.label}</div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:24,color:plan===p.id?"#fff":C.textDark,marginTop:2}}>{p.price}</div>
+            <div style={{fontSize:10,color:plan===p.id?"rgba(255,255,255,0.7)":C.textLight,marginTop:2}}>{p.sub}</div>
+          </div>
+        ))}
+      </div>
+      <button className="btn-blue" onClick={doSub} disabled={loading} style={{animation:"glow 2.5s ease-in-out infinite"}}>
+        {loading?"Processing…":`Subscribe ${plan==="monthly"?"€4.99/mo":"€49.99/yr"} →`}
+      </button>
+      <div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:10}}>Cancel anytime · No hidden fees</div>
+      {daysLeft>0&&<div style={{textAlign:"center",marginTop:11}}><span onClick={()=>onSubscribe("trial")} style={{fontSize:12,color:C.textLight,cursor:"pointer",textDecoration:"underline"}}>Continue free trial ({daysLeft} days left)</span></div>}
+    </div>
+  );
+};
 
-function paywallHTML() {
-  const dl = daysLeft(state.currentUser);
-  const expired = dl===0;
-  return `<div class="app" style="padding:0 24px 60px;overflow-y:auto;max-height:100vh">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 0 0">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:#FF4D6D;letter-spacing:.08em">🔥 RiseThrough</div>
-      <button onclick="logout()" style="font-size:10px;color:#6B6880;background:transparent;border:1px solid #1E1E2E;border-radius:8px;padding:4px 10px;cursor:pointer;text-transform:uppercase">Log Out</button>
+/* ══ HOME TAB ══ */
+const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
+  const daysLeft=Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  const isPaid=user?.plan==="monthly"||user?.plan==="annual";
+  const affIdx=Math.floor(Date.now()/86400000)%AFFIRMATIONS.length;
+  const modules=[
+    {id:"pain",icon:"🩺",title:"Pain Module",sub:"Chronic Pain",color:C.red,border:"rgba(230,57,70,0.2)"},
+    {id:"violence",icon:"📸",title:"Violence Report",sub:"Documentation",color:C.purple,border:"rgba(123,63,158,0.2)"},
+    {id:"community",icon:"💬",title:"Community Chat",sub:"Anonymous",color:C.teal,border:"rgba(26,140,122,0.2)"},
+    {id:"trauma",icon:"🧠",title:"Trauma Recovery",sub:"Self-Guided",color:C.blue,border:"rgba(26,111,160,0.2)"},
+  ];
+  return(
+    <div style={{padding:"10px 0",animation:"fadeIn 0.4s ease both"}}>
+      {!isPaid&&daysLeft>0&&(
+        <div onClick={onShowPaywall} className="glass" style={{margin:"0 18px 14px",borderRadius:13,padding:"11px 14px",display:"flex",alignItems:"center",gap:11,cursor:"pointer",border:"1px solid rgba(244,162,97,0.35)"}}>
+          <span style={{fontSize:17}}>⏳</span>
+          <div style={{flex:1}}><div style={{fontWeight:800,fontSize:12,color:C.gold}}>{daysLeft} days left in free trial</div>
+          <div style={{fontSize:11,color:C.textLight}}>Tap to upgrade</div></div>
+          <span style={{color:C.gold,fontSize:14}}>→</span>
+        </div>
+      )}
+      <div style={{padding:"0 22px",marginBottom:18}}>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:21,fontWeight:800,color:C.textDark}}>Hello, {user?.name?.split(" ")[0]||"Friend"} 👋</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:3}}>How are you feeling today?</div>
+      </div>
+      <div className="glass" style={{margin:"0 18px 18px",borderRadius:17,padding:18,background:"rgba(26,111,160,0.07)",border:"1px solid rgba(26,111,160,0.15)"}}>
+        <div style={{fontSize:10,fontWeight:700,color:C.blue,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Today's Reminder 💙</div>
+        <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.65,color:C.textMid}}>"{AFFIRMATIONS[affIdx]}"</div>
+      </div>
+      {history.length>0&&(
+        <div style={{display:"flex",gap:10,padding:"0 18px",marginBottom:18,overflowX:"auto"}}>
+          {[{label:"Last Pain",value:`${history[history.length-1]?.painLevel}/10`,color:C.red},{label:"Avg Score",value:(history.reduce((a,b)=>a+b.score,0)/history.length).toFixed(0),color:C.blue},{label:"Check-Ins",value:history.length,color:C.green}].map(s=>(
+            <div key={s.label} className="glass" style={{borderRadius:13,padding:"11px 14px",flexShrink:0,minWidth:85}}>
+              <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{s.label}</div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:21,color:s.color}}>{s.value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{padding:"0 18px"}}>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:12}}>Your Modules</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          {modules.map(m=>(
+            <div key={m.id} onClick={()=>onModuleSelect(m.id)} className="glass"
+              style={{borderRadius:18,padding:18,cursor:"pointer",border:`1px solid ${m.border}`,transition:"transform 0.15s",background:`rgba(255,255,255,0.4)`}}>
+              <div style={{fontSize:30,marginBottom:9}}>{m.icon}</div>
+              <div style={{fontWeight:800,fontSize:13,color:m.color,lineHeight:1.2}}>{m.title}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:3}}>{m.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
-    <div style="margin-top:28px;padding:18px 20px;border-radius:18px;background:${expired?'#FF4D6D15':'#00C98D12'};border:1px solid ${expired?'#FF4D6D44':'#00C98D44'}">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.06em;color:${expired?'#FF4D6D':'#00C98D'}">${expired?"FREE TRIAL ENDED":"FREE TRIAL ACTIVE"}</div>
-      <p style="font-size:13px;color:#6B6880;margin-top:4px">${expired?"Subscribe to continue your journey.":`${dl} day${dl!==1?"s":""} remaining.`}</p>
-    </div>
-    <div style="text-align:center;padding:28px 0 8px">
-      <div style="font-size:52px">✨</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:1.05;text-transform:uppercase;margin-top:12px"><span style="color:#FF4D6D">Unlock</span><br>Full Access</div>
-      <p style="font-size:14px;color:#6B6880;margin-top:10px;line-height:1.6">Continue your healing journey with all features.</p>
-    </div>
-    <div style="margin:20px 0 24px">
-      ${[["✅","Unlimited daily check-ins"],["📈","Full trends & history"],["🤖","Claude AI insights"],["💬","Peer support community"],["📄","PDF health reports"],["🎙️","Voice input"]].map(([ic,tx])=>
-        `<div class="feature-row"><span style="font-size:18px">${ic}</span><span style="font-size:14px">${tx}</span><div class="feature-check">✓</div></div>`
-      ).join("")}
-    </div>
-    <div class="plan-toggle">
-      ${[{id:"monthly",label:"Monthly",price:"€4.99",sub:"/month"},{id:"annual",label:"Annual",price:"€49.99",sub:"/year · Save 17%"}].map(p=>
-        `<div class="plan-opt ${state.selectedPlan===p.id?'active':''}" onclick="state.selectedPlan='${p.id}';render()">
-          <div class="plan-name" style="color:${state.selectedPlan===p.id?'#fff':'#6B6880'}">${p.label}</div>
-          <div class="plan-price" style="color:${state.selectedPlan===p.id?'#fff':'#F0EEF6'}">${p.price}</div>
-          <div class="plan-sub">${p.sub}</div>
-          ${p.id==="annual"?`<div class="best-badge">BEST VALUE</div>`:""}
-        </div>`
-      ).join("")}
-    </div>
-    <button class="btn" style="background:#FF4D6D;animation:glow 2.5s ease-in-out infinite" onclick="doSubscribe()" ${state.subscribeLoading?"disabled":""}>${state.subscribeLoading?"Processing…":`Subscribe ${state.selectedPlan==="monthly"?"€4.99/mo":"€49.99/yr"} →`}</button>
-    <p style="font-size:11px;color:#6B6880;text-align:center;margin-top:14px">Cancel anytime · No hidden fees</p>
-    ${!expired?`<p style="text-align:center;margin-top:14px"><span style="font-size:12px;color:#6B6880;cursor:pointer;text-decoration:underline" onclick="state.authStep='app';render()">Continue free trial (${dl} days left)</span></p>`:""}
-  </div>`;
-}
+  );
+};
 
-// ── APP SCREENS ───────────────────────────────────────────────
-function checkinFormHTML() {
-  const pl = state.painLevel;
-  const pc = painColor(pl);
-  return `<div class="app">
-    ${headerHTML(state.currentUser)}
-    ${trialBannerHTML()}
-    ${heroHTML("Daily","Check-In","Check in with your body & mind. No judgment.")}
-    <div class="card">
-      <div class="s-title">⚡ Pain Level</div>
-      <div class="sub">How intense is your pain right now?</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:72px;line-height:1;color:${pc};transition:color .3s;margin-bottom:8px" id="pain-num">${pl}</div>
-      <div style="font-size:13px;color:#6B6880;margin-bottom:16px">${painLabel(pl)} — slide to adjust</div>
-      <input type="range" min="0" max="10" value="${pl}" id="pain-slider" style="accent-color:${pc}" oninput="state.painLevel=+this.value;document.getElementById('pain-num').textContent=this.value;document.getElementById('pain-num').style.color=this.value<=3?'#00C98D':this.value<=6?'#FF8C42':'#FF4D6D';this.style.accentColor=this.value<=3?'#00C98D':this.value<=6?'#FF8C42':'#FF4D6D'"/>
-      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:#6B6880"><span>0 None</span><span>5 Moderate</span><span>10 Intense</span></div>
+/* ══ PAIN MODULE ══ */
+const PainModule=({user,history,setHistory,onShowPaywall})=>{
+  const [painLevel,setPainLevel]=useState(5);
+  const [selectedAreas,setSelectedAreas]=useState([]);
+  const [mood,setMood]=useState(null);
+  const [traumaChecks,setTraumaChecks]=useState({});
+  const [notes,setNotes]=useState("");
+  const [screen,setScreen]=useState("form");
+  const [isListening,setIsListening]=useState(false);
+  const [voiceStatus,setVoiceStatus]=useState("");
+  const recRef=useRef(null);
+  const painColor=painLevel<=3?C.green:painLevel<=6?C.gold:C.red;
+  const painLabel=["None","Minimal","Minimal","Mild","Mild","Moderate","Moderate","Severe","Severe","Intense","Intense"][painLevel];
+  const checkedCount=Object.values(traumaChecks).filter(Boolean).length;
+  const selMood=MOODS.find(m=>m.value===mood);
+  const startVoice=()=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){setVoiceStatus("Voice not supported.");return;}
+    const rec=new SR();rec.continuous=false;rec.interimResults=true;rec.lang="en-US";
+    rec.onstart=()=>{setIsListening(true);setVoiceStatus("Listening…");};
+    rec.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join("");setNotes(t);if(e.results[0].isFinal)setVoiceStatus("✓ Saved!");};
+    rec.onerror=()=>{setIsListening(false);setVoiceStatus("Mic error — try again");};
+    rec.onend=()=>setIsListening(false);
+    recRef.current=rec;rec.start();
+  };
+  const stopVoice=()=>{recRef.current?.stop();setIsListening(false);};
+  const handleSubmit=()=>{
+    const score=Math.round(((10-painLevel)*3+(mood||3)*4+checkedCount*5)/3);
+    setHistory(prev=>[...prev.slice(-13),{id:Date.now(),date:new Date().toLocaleDateString("en-US",{weekday:"short"}),fullDate:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),painLevel,mood,checkedCount,areas:selectedAreas,notes,score}]);
+    setScreen("results");
+  };
+  const resetForm=()=>{setPainLevel(5);setSelectedAreas([]);setTraumaChecks({});setMood(null);setNotes("");setScreen("form");};
+  const toggleArea=(area)=>setSelectedAreas(p=>p.includes(area)?p.filter(a=>a!==area):[...p,area]);
+
+  const BODY_PARTS=[
+    {id:"Head",cx:65,cy:25,rx:18,ry:20,shape:"ellipse"},
+    {id:"Neck",x:58,y:43,w:14,h:14,shape:"rect"},
+    {id:"Shoulders",parts:[{cx:36,cy:65,rx:15,ry:10},{cx:94,cy:65,rx:15,ry:10}],shape:"dualEllipse"},
+    {id:"Chest",x:43,y:57,w:44,h:32,shape:"rect"},
+    {id:"Upper Back",x:43,y:89,w:44,h:25,shape:"rect"},
+    {id:"Lower Back",x:43,y:114,w:44,h:25,shape:"rect"},
+    {id:"Hips",x:41,y:139,w:48,h:20,shape:"rect"},
+    {id:"Legs",parts:[{x:43,y:159,w:20,h:32},{x:67,y:159,w:20,h:32}],shape:"dualRect"},
+    {id:"Feet",parts:[{cx:53,cy:197,rx:12,ry:7},{cx:77,cy:197,rx:12,ry:7}],shape:"dualEllipse"},
+  ];
+  const aFill=(id)=>selectedAreas.includes(id)?`rgba(230,57,70,${0.25+painLevel*0.065})`:"rgba(26,111,160,0.1)";
+  const aStroke=(id)=>selectedAreas.includes(id)?C.red:"rgba(26,111,160,0.22)";
+
+  if(screen==="results"){
+    const score=Math.round(((10-painLevel)*3+(mood||3)*4+checkedCount*5)/3);
+    const sc=score>=20?C.green:score>=12?C.gold:C.red;
+    return(
+      <div style={{animation:"scaleIn 0.35s ease both"}}>
+        <SectionTitle icon="✅" title="Today's Report" sub="Here's how you showed up today"/>
+        <GCard style={{textAlign:"center",padding:28}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Recovery Index</div>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:76,fontWeight:800,color:sc,lineHeight:1}}>{score}</div>
+          <div style={{fontSize:13,color:C.textLight,marginTop:5}}>out of 30 · {score>=20?"Keep pushing!":score>=12?"You're doing okay":"Be gentle with yourself"}</div>
+        </GCard>
+        <GCard>
+          <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📊 Snapshot</div>
+          {[{label:"Pain Level",value:`${painLevel}/10 · ${painLabel}`,color:painColor},{label:"Mood",value:selMood?`${selMood.emoji} ${selMood.label}`:"—",color:selMood?.color},{label:"Pain Areas",value:selectedAreas.length?selectedAreas.join(", "):"None"},{label:"Recovery Checks",value:`${checkedCount}/${TRAUMA_CHECKS.length}`,color:C.blue}].map((row,i,arr)=>(
+            <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+              <span style={{fontSize:13,color:C.textLight}}>{row.label}</span>
+              <span style={{fontWeight:800,fontSize:13,color:row.color||C.textDark}}>{row.value}</span>
+            </div>
+          ))}
+        </GCard>
+        <div style={{margin:"0 18px 28px",display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <button className="btn-blue" onClick={resetForm}>＋ New Check-In</button>
+          <button className="btn-outline" onClick={()=>setScreen("form")}>View Body Map</button>
+        </div>
+      </div>
+    );
+  }
+  return(
+    <div>
+      <SectionTitle icon="🩺" title="Pain Module" sub="Track & visualise your pain"/>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:3}}>⚡ Pain Level</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:13}}>How intense is your pain right now?</div>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:68,fontWeight:800,lineHeight:1,color:painColor,transition:"color 0.3s",marginBottom:5}}>{painLevel}</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:11}}>{painLabel}</div>
+        <input type="range" min={0} max={10} value={painLevel} onChange={e=>setPainLevel(Number(e.target.value))}
+          style={{width:"100%",accentColor:painColor}}/>
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:5,fontSize:10,color:C.textLight}}>
+          <span>0 None</span><span>5 Moderate</span><span>10 Intense</span>
+        </div>
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:3}}>🗺️ Pain Body Map</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:14}}>Tap areas where you feel pain</div>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+          <svg viewBox="0 0 130 210" width="130" height="210">
+            {BODY_PARTS.map(bp=>{
+              const onClick=()=>toggleArea(bp.id);
+              const fill=aFill(bp.id); const stroke=aStroke(bp.id);
+              if(bp.shape==="ellipse") return<ellipse key={bp.id} cx={bp.cx} cy={bp.cy} rx={bp.rx} ry={bp.ry} fill={fill} stroke={stroke} strokeWidth="1.5" style={{cursor:"pointer"}} onClick={onClick}/>;
+              if(bp.shape==="rect") return<rect key={bp.id} x={bp.x} y={bp.y} width={bp.w} height={bp.h} rx="6" fill={fill} stroke={stroke} strokeWidth="1.5" style={{cursor:"pointer"}} onClick={onClick}/>;
+              if(bp.shape==="dualEllipse") return(
+                <g key={bp.id} onClick={onClick} style={{cursor:"pointer"}}>
+                  {bp.parts.map((p,i)=><ellipse key={i} cx={p.cx} cy={p.cy} rx={p.rx} ry={p.ry} fill={fill} stroke={stroke} strokeWidth="1.5"/>)}
+                </g>
+              );
+              if(bp.shape==="dualRect") return(
+                <g key={bp.id} onClick={onClick} style={{cursor:"pointer"}}>
+                  {bp.parts.map((p,i)=><rect key={i} x={p.x} y={p.y} width={p.w} height={p.h} rx="6" fill={fill} stroke={stroke} strokeWidth="1.5"/>)}
+                </g>
+              );
+              return null;
+            })}
+          </svg>
+        </div>
+        <div style={{display:"flex",justifyContent:"center",gap:14,marginBottom:10}}>
+          {[{c:"rgba(45,154,110,0.6)",l:"Mild"},{c:"rgba(244,162,97,0.7)",l:"Medium"},{c:"rgba(230,57,70,0.7)",l:"High"}].map(l=>(
+            <div key={l.l} style={{display:"flex",alignItems:"center",gap:4}}>
+              <div style={{width:12,height:12,borderRadius:3,background:l.c}}/><span style={{fontSize:10,color:C.textLight}}>{l.l}</span>
+            </div>
+          ))}
+        </div>
+        {selectedAreas.length>0&&<div style={{fontSize:12,color:C.red,fontWeight:700,textAlign:"center"}}>Selected: {selectedAreas.join(", ")}</div>}
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:3}}>💭 Mood Check</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:13}}>How are you feeling emotionally?</div>
+        <div style={{display:"flex",gap:6}}>
+          {MOODS.map(m=>(
+            <div key={m.value} onClick={()=>setMood(m.value)}
+              style={{flex:1,padding:"11px 4px",borderRadius:13,border:`2px solid ${mood===m.value?m.color:"rgba(26,111,160,0.14)"}`,background:mood===m.value?`${m.color}20`:"rgba(255,255,255,0.4)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,transition:"all 0.15s"}}>
+              <span style={{fontSize:21}}>{m.emoji}</span>
+              <span style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase"}}>{m.label}</span>
+            </div>
+          ))}
+        </div>
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:3}}>🛡️ Recovery Checks</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:13}}>Check all that apply today</div>
+        {TRAUMA_CHECKS.map((item,i)=>(
+          <div key={item.id} onClick={()=>setTraumaChecks(p=>({...p,[item.id]:!p[item.id]}))}
+            style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<TRAUMA_CHECKS.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+            <div style={{width:21,height:21,borderRadius:6,border:`2px solid ${traumaChecks[item.id]?C.blue:"rgba(26,111,160,0.24)"}`,background:traumaChecks[item.id]?C.blue:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,transition:"all 0.2s"}}>
+              {traumaChecks[item.id]&&<span style={{color:"#fff",fontSize:11,fontWeight:900}}>✓</span>}
+            </div>
+            <span style={{fontSize:15}}>{item.icon}</span>
+            <span style={{fontSize:13,lineHeight:1.4,color:C.textMid}}>{item.label}</span>
+          </div>
+        ))}
+      </GCard>
+      <GCard>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
+          <div style={{fontWeight:800,fontSize:14,color:C.textDark}}>📝 Your Notes</div>
+          <button onClick={isListening?stopVoice:startVoice}
+            style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",borderRadius:18,border:`1.5px solid ${isListening?C.red:C.blue}`,background:isListening?"rgba(230,57,70,0.09)":"rgba(26,111,160,0.07)",color:isListening?C.red:C.blue,fontSize:11,fontWeight:700,cursor:"pointer"}}>
+            <span style={{fontSize:13,animation:isListening?"pulse 1s infinite":"none"}}>{isListening?"⏹":"🎙️"}</span>
+            {isListening?"Stop":"Voice"}
+          </button>
+        </div>
+        <div style={{fontSize:12,color:isListening?C.red:C.textLight,marginBottom:11}}>{voiceStatus||"Type or tap Voice (optional)"}</div>
+        <textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={4} placeholder="How did today feel? Any wins, struggles, or observations..."
+          style={{width:"100%",background:"rgba(255,255,255,0.5)",border:"1px solid rgba(26,111,160,0.13)",borderRadius:11,color:C.textDark,fontSize:13,padding:13,resize:"none",outline:"none",lineHeight:1.6}}/>
+      </GCard>
+      <div style={{margin:"0 18px 32px"}}>
+        <button className="btn-red" onClick={handleSubmit}>Log Pain Check-In →</button>
+      </div>
     </div>
-    <div class="card">
-      <div class="s-title">🗺️ Body Map</div>
-      <div class="sub">Tap where you're feeling it today</div>
-      <div class="area-grid">${PAIN_AREAS.map(a=>`<div class="area-chip ${state.selectedAreas.includes(a)?'active':''}" onclick="toggleArea('${a}')">${a}</div>`).join("")}</div>
-    </div>
-    <div class="card">
-      <div class="s-title">💭 Mood Check</div>
-      <div class="sub">How are you feeling emotionally?</div>
-      <div class="mood-row">${MOODS.map(m=>`<div class="mood-btn ${state.mood===m.value?'active':''}" style="${state.mood===m.value?`border-color:${m.color};background:${m.color}22`:''}" onclick="state.mood=${m.value};render()"><span class="emoji">${m.emoji}</span><span class="lbl">${m.label}</span></div>`).join("")}</div>
-    </div>
-    <div class="card">
-      <div class="s-title">🛡️ Recovery Checks</div>
-      <div class="sub">Check all that apply today</div>
-      ${TRAUMA_CHECKS.map(item=>`<div class="check-row" onclick="toggleCheck('${item.id}')">
-        <div class="checkbox ${state.traumaChecks[item.id]?'checked':''}">${state.traumaChecks[item.id]?"✓":""}</div>
-        <span style="margin-right:4px">${item.icon}</span>
-        <span style="font-size:13px;line-height:1.4">${item.label}</span>
-      </div>`).join("")}
-    </div>
-    <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div class="s-title">📝 Your Words</div>
-        <button class="voice-btn" style="border:1.5px solid ${state.isListening?'#FF4D6D':'#7B61FF'};background:${state.isListening?'#FF4D6D22':'#7B61FF22'};color:${state.isListening?'#FF4D6D':'#7B61FF'}" onclick="toggleVoice()">
-          <span style="font-size:16px;${state.isListening?'animation:pulse 1s infinite':''}">${state.isListening?"⏹":"🎙️"}</span>${state.isListening?"Stop":"Voice"}
+  );
+};
+
+/* ══ VIOLENCE MODULE ══ */
+const ViolenceModule=({user,onShowPaywall})=>{
+  const isPaid=user?.plan==="monthly"||user?.plan==="annual";
+  const records=[{id:1,date:"Mar 8, 2026",type:"Physical",desc:"Documented incident at home",shared:false},{id:2,date:"Mar 3, 2026",type:"Documentation",desc:"Photo evidence recorded",shared:true}];
+  return(
+    <div>
+      <SectionTitle icon="📸" title="Violence Report" sub="Private & secure documentation"/>
+      <GCard style={{background:"rgba(123,63,158,0.07)",border:"1px solid rgba(123,63,158,0.18)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
+          <span style={{fontSize:18}}>🔒</span>
+          <div style={{fontWeight:800,fontSize:13,color:C.purple}}>Private &amp; Encrypted</div>
+        </div>
+        <div style={{fontSize:13,color:C.textMid,lineHeight:1.6}}>Your documentation is stored securely. Only you control who sees it.</div>
+      </GCard>
+      <div style={{padding:"0 18px",marginBottom:14}}>
+        <button className="btn-blue" style={{marginBottom:10,background:"linear-gradient(135deg,#7B3F9E,#9c4fbf)"}}>📝 Document an Incident (Free)</button>
+        <button onClick={isPaid?undefined:onShowPaywall} className="btn-outline" style={{borderColor:"rgba(123,63,158,0.28)",color:C.purple}}>
+          📸 Add Secure Photos {!isPaid&&"🔒 Premium"}
         </button>
       </div>
-      <div class="sub" style="${state.isListening?'color:#FF4D6D':''}">${state.voiceStatus||"Type or tap Voice to speak (optional)"}</div>
-      ${state.isListening?`<div class="rec-indicator"><span style="animation:pulse 1s infinite">🔴</span>Recording — speak clearly</div>`:""}
-      <textarea rows="4" placeholder="How did today feel? Any wins, struggles, or observations..." oninput="state.notes=this.value">${state.notes}</textarea>
-    </div>
-    <div class="affirmation">
-      <div class="aff-label">Today's Reminder</div>
-      <div class="aff-text">"${AFFIRMATIONS[state.affIdx]}"</div>
-    </div>
-    <div style="margin:0 24px 32px">
-      <button class="btn" style="background:#FF4D6D" onclick="submitCheckin()">Submit Check-In →</button>
-    </div>
-    ${navHTML(state.tab)}
-  </div>`;
-}
-
-function resultsHTML() {
-  const score = Math.round(((10-state.painLevel)*3+(state.mood||3)*4+Object.values(state.traumaChecks).filter(Boolean).length*5)/3);
-  const sc = scoreColor(score);
-  const selMood = MOODS.find(m=>m.value===state.mood);
-  const pc = painColor(state.painLevel);
-  const checkedCount = Object.values(state.traumaChecks).filter(Boolean).length;
-  return `<div class="app">
-    ${headerHTML(state.currentUser)}
-    ${trialBannerHTML()}
-    ${heroHTML("Today's","Report","Here's how you showed up today")}
-    <div class="card" style="text-align:center">
-      <div style="font-size:11px;color:#6B6880;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Recovery Index</div>
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:86px;color:${sc};line-height:1">${score}</div>
-      <div style="font-size:13px;color:#6B6880;margin-top:4px">out of 30 · ${score>=20?"Keep pushing!":score>=12?"You're doing okay":"Be gentle with yourself"}</div>
-    </div>
-    <div class="card">
-      <div class="s-title">📊 Snapshot</div>
-      ${[
-        {label:"Pain Level",value:`${state.painLevel}/10 · ${painLabel(state.painLevel)}`,color:pc},
-        {label:"Mood",value:selMood?`${selMood.emoji} ${selMood.label}`:"—",color:selMood?.color},
-        {label:"Pain Areas",value:state.selectedAreas.length?state.selectedAreas.join(", "):"None noted"},
-        {label:"Recovery Checks",value:`${checkedCount}/${TRAUMA_CHECKS.length}`,color:"#7B61FF"},
-      ].map(r=>`<div class="result-row"><span class="result-label">${r.label}</span><span class="result-val" style="color:${r.color||'#F0EEF6'}">${r.value}</span></div>`).join("")}
-    </div>
-    ${state.notes.trim()?`<div class="card"><div class="s-title">📝 Note</div><p style="font-size:14px;color:#6B6880;line-height:1.6">${state.notes}</p></div>`:""}
-    <div class="affirmation"><div class="aff-label">Today's Reminder</div><div class="aff-text">"${AFFIRMATIONS[state.affIdx]}"</div></div>
-    <div class="btn-grid">
-      <button class="btn" style="background:#FF4D6D" onclick="resetForm()">＋ New</button>
-      <button class="btn" style="background:#7B61FF" onclick="switchTab('insights')">🤖 AI</button>
-      <button class="btn full" style="background:#00C98D" onclick="switchTab('community')">💬 Community</button>
-      <button class="btn full" style="background:#FF8C42" onclick="exportPDF()" ${state.pdfLoading?"disabled":""}>${state.pdfLoading?"⏳ Generating…":"📄 Export PDF"}</button>
-    </div>
-    <div style="height:28px"></div>
-    ${navHTML(state.tab)}
-  </div>`;
-}
-
-function trendsHTML() {
-  const h = state.history;
-  const avgPain = (h.reduce((a,b)=>a+b.painLevel,0)/h.length).toFixed(1);
-  const avgScore = (h.reduce((a,b)=>a+b.score,0)/h.length).toFixed(0);
-  const bestDay = h.reduce((a,b)=>b.score>a.score?b:a,h[0]);
-  const last = h[h.length-1], prev = h[h.length-2];
-  const trend = h.length>=2?last.painLevel-prev.painLevel:0;
-  const last7 = h.slice(-7);
-  return `<div class="app">
-    ${headerHTML(state.currentUser)}
-    ${trialBannerHTML()}
-    ${heroHTML("Your","Journey",`${h.length} check-ins tracked`,"#7B61FF")}
-    <div class="stat-pills">
-      ${[{label:"Avg Pain",value:avgPain,color:"#FF4D6D"},{label:"Avg Score",value:avgScore,color:"#7B61FF"},{label:"Best Day",value:bestDay.date,color:"#00C98D"},{label:"Trend",value:trend>0?`+${trend}↑`:trend<0?`${trend}↓`:"Stable",color:trend>0?"#FF4D6D":trend<0?"#00C98D":"#6B6880"}].map(s=>
-        `<div class="stat-pill"><div class="pill-label">${s.label}</div><div class="pill-val" style="color:${s.color}">${s.value}</div></div>`
-      ).join("")}
-    </div>
-    <div class="card">
-      <div class="s-title">📉 Pain Over Time</div>
-      <div class="sub">Lower is better</div>
-      ${miniBarChart(last7,"painLevel","#FF4D6D")}
-    </div>
-    <div class="card">
-      <div class="s-title">📈 Recovery Score</div>
-      <div class="sub">Higher is better · max 30</div>
-      ${miniBarChart(last7,"score","#7B61FF")}
-    </div>
-    <div class="card">
-      <div class="s-title">💭 Mood Trend</div>
-      <div class="sub">1 = Struggling · 5 = Strong</div>
-      ${miniBarChart(last7,"mood","#00C98D")}
-    </div>
-    <div class="card">
-      <div class="s-title">🗂 Check-In Log</div>
-      ${[...h].reverse().map((entry,i)=>`<div class="log-row">
-        <div><div style="font-weight:600;font-size:13px">${entry.fullDate}</div>
-        <div style="font-size:11px;color:#6B6880;margin-top:2px">Pain ${entry.painLevel}/10 · ${MOODS.find(m=>m.value===entry.mood)?.emoji||"—"} · ${entry.checkedCount} checks</div></div>
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:${scoreColor(entry.score)}">${entry.score}</div>
-      </div>`).join("")}
-    </div>
-    ${navHTML(state.tab)}
-  </div>`;
-}
-
-function insightsHTML() {
-  return `<div class="app">
-    ${headerHTML(state.currentUser)}
-    ${trialBannerHTML()}
-    ${heroHTML("AI","Insights","Powered by Claude — your personal recovery analyst","#7B61FF")}
-    <div class="card">
-      <div class="s-title">🤖 What Claude Sees</div>
-      <div class="sub">Claude analyzes your check-ins to find patterns, wins, and suggestions.</div>
-      ${!state.aiInsights&&!state.aiLoading?`
-        <div style="text-align:center;padding:16px 0 8px">
-          <div style="font-size:52px;margin-bottom:14px">🧠</div>
-          <p style="font-size:14px;color:#6B6880;margin-bottom:20px;line-height:1.6">Complete a check-in, then tap below for personalized insights.</p>
-          <button class="btn" style="background:#7B61FF" onclick="fetchInsights()">Analyze My Data →</button>
-        </div>`:""}
-      ${state.aiLoading?`<div style="text-align:center;padding:32px 0"><span style="font-size:42px;display:inline-block;animation:spin 1.5s linear infinite">🔄</span><p style="font-size:14px;color:#6B6880;margin-top:12px">Claude is reading your data…</p></div>`:""}
-      ${state.aiInsights?.error?`<p style="font-size:14px;color:#FF4D6D;text-align:center;padding:16px">${state.aiInsights.error}</p>`:""}
-      ${state.aiInsights&&!state.aiInsights.error?`
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;letter-spacing:.06em;color:#7B61FF;line-height:1.1;margin-bottom:14px;text-transform:uppercase">${state.aiInsights.headline}</div>
-        <div style="font-size:14px;line-height:1.7;margin-bottom:22px;padding:14px;background:#7B61FF11;border-radius:12px;border-left:3px solid #7B61FF">${state.aiInsights.summary}</div>
-        ${insightListHTML("🔍","Patterns",state.aiInsights.patterns,"#FF8C42")}
-        ${insightListHTML("🏆","Your Wins",state.aiInsights.wins,"#00C98D")}
-        ${insightListHTML("💡","Suggestions",state.aiInsights.suggestions,"#7B61FF")}
-        <div style="margin:18px 0 6px;padding:16px;background:#FF4D6D11;border-left:4px solid #FF4D6D;border-radius:0 12px 12px 0">
-          <div style="font-size:10px;color:#FF4D6D;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">Personalized Affirmation</div>
-          <div style="font-size:15px;font-style:italic;line-height:1.6">"${state.aiInsights.affirmation}"</div>
-        </div>
-        <div style="margin-top:18px"><button class="btn" style="background:#7B61FF" onclick="fetchInsights()">↻ Refresh</button></div>
-      `:""}
-    </div>
-    ${navHTML(state.tab)}
-  </div>`;
-}
-
-function insightListHTML(icon, title, items, color) {
-  if(!items||!items.length) return "";
-  return `<div class="insight-section">
-    <div class="insight-title" style="color:${color}">${icon} ${title}</div>
-    ${items.map((item,i)=>`<div class="insight-item">
-      <div class="insight-dot" style="background:${color}"></div>
-      <span style="font-size:13px;line-height:1.55">${item}</span>
-    </div>`).join("")}
-  </div>`;
-}
-
-function communityHTML() {
-  return `<div class="app">
-    ${headerHTML(state.currentUser)}
-    ${trialBannerHTML()}
-    ${heroHTML("Peer","Support","You are not alone on this journey","#00C98D")}
-    <div class="safe-space-note">
-      <div style="font-size:10px;color:#7B61FF;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Safe Space</div>
-      <div style="font-size:12px;color:#6B6880;line-height:1.5">Be kind · No medical advice · Support, don't diagnose 💜</div>
-    </div>
-    <div style="margin:0 24px 14px;background:#12121A;border:1px solid #1E1E2E;border-radius:20px;overflow:hidden">
-      <div style="padding:12px 16px;border-bottom:1px solid #1E1E2E;display:flex;align-items:center;gap:8px">
-        <div style="width:8px;height:8px;border-radius:50%;background:#00C98D;animation:pulse 2s infinite"></div>
-        <span style="font-size:12px;color:#6B6880">Community is active</span>
-      </div>
-      <div class="chat-log" id="chat-log">
-        ${state.chatMessages.map(msg=>`<div class="bubble-wrap ${msg.mine?'mine':''}">
-          <span style="font-size:22px;flex-shrink:0">${msg.avatar}</span>
-          <div>
-            ${!msg.mine?`<div class="bubble-name">${msg.user}</div>`:""}
-            <div class="bubble ${msg.mine?'mine':'theirs'}">${msg.text}</div>
-            <div class="bubble-time" style="text-align:${msg.mine?'right':'left'}">${msg.time}</div>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>Share With</div>
+        {[{icon:"👮",label:"Police / Law Enforcement",premium:false},{icon:"🏥",label:"Healthcare Provider",premium:false},{icon:"👥",label:"Social Workers",premium:true}].map((item,i,arr)=>(
+          <div key={item.label} onClick={!item.premium||isPaid?undefined:onShowPaywall}
+            style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+            <span style={{fontSize:20}}>{item.icon}</span>
+            <span style={{flex:1,fontSize:13,fontWeight:600,color:C.textMid}}>{item.label}</span>
+            {item.premium&&!isPaid?<span style={{fontSize:10,background:"rgba(244,162,97,0.18)",color:C.gold,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Premium</span>:<span style={{fontSize:15,color:C.green}}>→</span>}
           </div>
-        </div>`).join("")}
-      </div>
-      <div style="border-top:1px solid #1E1E2E;padding:12px;display:flex;gap:8px">
-        <input id="chat-input" value="${state.chatInput}" oninput="state.chatInput=this.value" onkeydown="if(event.key==='Enter')sendMessage()"
-          placeholder="Share how you're feeling…"
-          style="flex:1;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;color:#F0EEF6;font-size:13px;padding:10px 14px;outline:none"/>
-        <button onclick="sendMessage()" style="padding:10px 16px;background:#7B61FF;border:none;border-radius:12px;color:#fff;font-size:18px;cursor:pointer">→</button>
-      </div>
+        ))}
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>Your Records</div>
+        {records.map((r,i)=>(
+          <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<records.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+            <div style={{width:38,height:38,borderRadius:11,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>📄</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{r.type}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{r.date} · {r.desc}</div>
+            </div>
+            {r.shared&&<span style={{fontSize:10,background:"rgba(45,154,110,0.13)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>}
+          </div>
+        ))}
+      </GCard>
     </div>
-    <div class="card">
-      <div class="s-title">👤 Display Name</div>
-      <div class="sub">How you appear in the community</div>
-      <input value="${state.chatName}" oninput="state.chatName=this.value" style="width:100%;background:#0A0A0F;border:1px solid #1E1E2E;border-radius:12px;color:#F0EEF6;font-size:14px;padding:12px 14px;outline:none"/>
-    </div>
-    ${navHTML(state.tab)}
-  </div>`;
-}
+  );
+};
 
-// ── MAIN RENDER ───────────────────────────────────────────────
-function getHTML() {
-  if(state.authStep==="login") return loginHTML();
-  if(state.authStep==="register") return registerHTML();
-  if(state.authStep==="welcome") return welcomeHTML();
-  if(state.authStep==="paywall") return paywallHTML();
-  // App
-  if(state.tab==="history") return trendsHTML();
-  if(state.tab==="insights") return insightsHTML();
-  if(state.tab==="community") return communityHTML();
-  if(state.screen==="results") return resultsHTML();
-  return checkinFormHTML();
-}
-
-// ── ACTIONS ───────────────────────────────────────────────────
-function switchAuth(step){ state.authStep=step; render(); }
-function switchTab(tab){
-  if(tab==="paywall"){state.authStep="paywall";render();return;}
-  state.tab=tab;
-  if(tab==="checkin") state.screen="form";
-  render();
-}
-
-function doLogin(){
-  const e={};
-  if(!state.loginEmail.includes("@")) e.email="Enter a valid email";
-  if(state.loginPass.length<6) e.pass="Password must be at least 6 characters";
-  if(Object.keys(e).length){state.loginErrors=e;render();return;}
-  state.loginLoading=true; render();
-  window.firebaseLogin(state.loginEmail, state.loginPass)
-    .then(()=>{ state.loginLoading=false; })
-    .catch(err=>{
-      state.loginLoading=false;
-      state.loginErrors={pass:"Incorrect email or password"};
-      render();
-    });
-}
-
-function doRegister(){
-  const e={};
-  if(state.regName.trim().length<2) e.name="Enter your full name";
-  if(!state.regEmail.includes("@")) e.email="Enter a valid email";
-  if(state.regPass.length<6) e.pass="Min 6 characters";
-  if(state.regPass!==state.regConfirm) e.confirm="Passwords don't match";
-  if(!state.regAgreed) e.agreed="Please accept the terms";
-  if(Object.keys(e).length){state.regErrors=e;render();return;}
-  state.regLoading=true; render();
-  window.firebaseRegister(state.regEmail, state.regPass, state.regName.trim())
-    .then(()=>{ state.regLoading=false; })
-    .catch(err=>{
-      state.regLoading=false;
-      if(err.code==='auth/email-already-in-use') state.regErrors={email:"Email already registered"};
-      else state.regErrors={email:"Registration failed. Try again."};
-      render();
-    });
-}
-
-function handleDigit(i,val){
-  if(!/^\d*$/.test(val)) return;
-  state.verifyInput[i]=val.slice(-1);
-  render();
-  if(val&&i<5) setTimeout(()=>{ const next=$(`d${i+1}`); if(next) next.focus(); },10);
-}
-function handleDigitKey(i,e){ if(e.key==="Backspace"&&!state.verifyInput[i]&&i>0) setTimeout(()=>{ const prev=$(`d${i-1}`); if(prev) prev.focus(); },10); }
-
-function doVerify(){
-  const entered=state.verifyInput.join("");
-  if(entered.length<6){state.verifyError="Enter all 6 digits";render();return;}
-  state.verifyLoading=true; render();
-  setTimeout(()=>{
-    if(entered===state.verifyData.code){
-      const users=JSON.parse(localStorage.getItem("rt_users")||"[]");
-      const idx=users.findIndex(u=>u.email===state.verifyData.email);
-      if(idx>=0){users[idx].verified=true;localStorage.setItem("rt_users",JSON.stringify(users));}
-      const u=users[idx];
-      state.currentUser=u; state.chatName=u.name||"You";
-      sessionStorage.setItem("rt_session",JSON.stringify(u));
-      state.verifyLoading=false; state.authStep="welcome"; render();
-      setTimeout(()=>{state.authStep="app";render();},3000);
-    } else {state.verifyError="Incorrect code. Try again.";state.verifyLoading=false;render();}
-  },700);
-}
-
-function doSubscribe(){
-  state.subscribeLoading=true; render();
-  setTimeout(()=>{
-    const users=JSON.parse(localStorage.getItem("rt_users")||"[]");
-    const idx=users.findIndex(u=>u.email===state.currentUser.email);
-    if(idx>=0){users[idx].plan=state.selectedPlan;localStorage.setItem("rt_users",JSON.stringify(users));}
-    state.currentUser={...state.currentUser,plan:state.selectedPlan};
-    sessionStorage.setItem("rt_session",JSON.stringify(state.currentUser));
-    state.subscribeLoading=false; state.authStep="app"; render();
-  },1200);
-}
-
-function logout(){
-  window.firebaseLogout().then(()=>{
-    state.currentUser=null; state.authStep="login";
-    state.loginEmail=""; state.loginPass=""; state.loginErrors={};
-    render();
-  });
-}
-
-function toggleArea(area){
-  const i=state.selectedAreas.indexOf(area);
-  if(i>=0) state.selectedAreas.splice(i,1); else state.selectedAreas.push(area);
-  const el=document.querySelector(`.area-chip[onclick="toggleArea('${area}')"]`);
-  if(el) el.classList.toggle("active");
-}
-
-function toggleCheck(id){
-  state.traumaChecks[id]=!state.traumaChecks[id];
-  const rows=document.querySelectorAll(".check-row");
-  rows.forEach(row=>{
-    if(row.getAttribute("onclick")===`toggleCheck('${id}')`){
-      const cb=row.querySelector(".checkbox");
-      if(cb){ cb.classList.toggle("checked",state.traumaChecks[id]); cb.textContent=state.traumaChecks[id]?"✓":""; }
-    }
-  });
-}
-
-function submitCheckin(){
-  const score=Math.round(((10-state.painLevel)*3+(state.mood||3)*4+Object.values(state.traumaChecks).filter(Boolean).length*5)/3);
-  const entry = {id:Date.now(),date:new Date().toLocaleDateString("en-US",{weekday:"short"}),
-    fullDate:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
-    painLevel:state.painLevel,mood:state.mood,checkedCount:Object.values(state.traumaChecks).filter(Boolean).length,
-    notes:state.notes,score};
-  state.history=[...state.history.slice(-13), entry];
-  // Save to Firebase
-  if(window.saveCheckin) window.saveCheckin(entry);
-  state.aiInsights=null; state.screen="results"; render();
-}
-
-function resetForm(){
-  state.painLevel=5; state.selectedAreas=[]; state.traumaChecks={};
-  state.mood=null; state.notes=""; state.screen="form"; state.tab="checkin"; render();
-}
-
-function sendMessage(){
-  if(!state.chatInput.trim()) return;
-  state.chatMessages.push({id:Date.now(),user:state.chatName,avatar:"🔥",text:state.chatInput.trim(),time:"Just now",mine:true});
-  state.chatInput=""; render();
-}
-
-function scrollToBottom(){
-  const log=$("chat-log");
-  if(log) setTimeout(()=>{log.scrollTop=log.scrollHeight;},50);
-}
-
-function toggleVoice(){
-  if(state.isListening){
-    state.recognition?.stop(); state.isListening=false; state.voiceStatus=""; render(); return;
+/* ══ TRAUMA MODULE ══ */
+const TraumaModule=()=>{
+  const [active,setActive]=useState(null);
+  if(active){
+    const ex=EXERCISES.find(e=>e.id===active);
+    return(
+      <div style={{animation:"scaleIn 0.3s ease both"}}>
+        <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>setActive(null)} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.textDark}}>{ex?.icon} {ex?.title}</div>
+        </div>
+        <GCard style={{marginTop:14}}>
+          <div style={{fontSize:12,color:C.textLight,marginBottom:14}}>{ex?.desc}</div>
+          {ex.steps.map((step,i)=>(
+            <div key={i} style={{display:"flex",gap:13,padding:"11px 0",borderBottom:i<ex.steps.length-1?"1px solid rgba(26,111,160,0.09)":"none",alignItems:"flex-start"}}>
+              <div style={{width:25,height:25,borderRadius:"50%",background:"rgba(26,111,160,0.13)",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:11,color:C.blue}}>{i+1}</div>
+              <span style={{fontSize:14,lineHeight:1.65,color:C.textMid}}>{step}</span>
+            </div>
+          ))}
+        </GCard>
+        <div style={{margin:"0 18px 28px"}}><button className="btn-blue" onClick={()=>setActive(null)}>✅ Exercise Complete</button></div>
+      </div>
+    );
   }
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){state.voiceStatus="Voice not supported in this browser.";render();return;}
-  const rec=new SR(); rec.continuous=false; rec.interimResults=true; rec.lang="en-US";
-  rec.onstart=()=>{state.isListening=true;state.voiceStatus="Listening…";render();};
-  rec.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join("");state.notes=t;if(e.results[0].isFinal){state.voiceStatus="✓ Saved!";render();}else{const ta=document.querySelector("textarea");if(ta)ta.value=t;}};
-  rec.onerror=()=>{state.isListening=false;state.voiceStatus="Mic error — try again";render();};
-  rec.onend=()=>{state.isListening=false;render();};
-  state.recognition=rec; rec.start();
+  return(
+    <div>
+      <SectionTitle icon="🧠" title="Trauma Recovery" sub="Self-guided exercises & empowerment"/>
+      <GCard style={{background:"rgba(26,111,160,0.06)",border:"1px solid rgba(26,111,160,0.17)"}}>
+        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:7}}>
+          <span style={{fontSize:18}}>💙</span>
+          <div style={{fontWeight:800,fontSize:13,color:C.blue}}>Self-Guided Exercises + Empowerment</div>
+        </div>
+        <div style={{fontSize:13,color:C.textMid,lineHeight:1.6}}>Take your time with each exercise. There's no rush on the healing journey.</div>
+      </GCard>
+      <div style={{padding:"0 18px"}}>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:12}}>Choose an Exercise</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:11,marginBottom:18}}>
+          {EXERCISES.map(ex=>(
+            <div key={ex.id} onClick={()=>setActive(ex.id)} className="glass"
+              style={{borderRadius:17,padding:16,cursor:"pointer",transition:"transform 0.15s",border:"1px solid rgba(26,111,160,0.13)"}}>
+              <div style={{fontSize:26,marginBottom:8}}>{ex.icon}</div>
+              <div style={{fontWeight:800,fontSize:13,color:C.blue,lineHeight:1.2}}>{ex.title}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:3}}>{ex.desc}</div>
+            </div>
+          ))}
+        </div>
+        <button className="btn-blue">▶ Begin Recommended Exercise</button>
+      </div>
+      <div style={{height:20}}/>
+    </div>
+  );
+};
+
+/* ══ COMMUNITY ══ */
+const CommunityModule=({user})=>{
+  const [messages,setMessages]=useState(SEED_CHAT);
+  const [input,setInput]=useState(""); const [chatName,setChatName]=useState(user?.name?.split(" ")[0]||"You");
+  const chatEndRef=useRef(null);
+  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
+  const send=()=>{if(!input.trim())return;setMessages(p=>[...p,{id:Date.now(),user:chatName,avatar:"💙",text:input.trim(),time:"Just now",mine:true}]);setInput("");};
+  return(
+    <div>
+      <SectionTitle icon="💬" title="Community Chat" sub="Anonymous & supportive"/>
+      <GCard style={{background:"rgba(26,140,122,0.07)",border:"1px solid rgba(26,140,122,0.17)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:9}}>
+          <span style={{fontSize:16}}>🔒</span>
+          <div style={{fontWeight:700,fontSize:13,color:C.teal}}>Anonymous &amp; Safe Space</div>
+        </div>
+        <div style={{fontSize:12,color:C.textLight,marginTop:5}}>Your real name is never shown unless you choose to share it.</div>
+      </GCard>
+      <div className="glass" style={{margin:"0 18px 14px",borderRadius:18,overflow:"hidden"}}>
+        <div style={{padding:"13px 15px",fontWeight:800,fontSize:13,color:C.textDark,borderBottom:"1px solid rgba(26,111,160,0.09)"}}>Open Discussion</div>
+        <div style={{maxHeight:300,overflowY:"auto",padding:"11px 13px"}}>
+          {messages.map(msg=>(
+            <div key={msg.id} style={{display:"flex",gap:9,marginBottom:12,flexDirection:msg.mine?"row-reverse":"row"}}>
+              <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(26,111,160,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{msg.avatar}</div>
+              <div style={{maxWidth:"70%"}}>
+                {!msg.mine&&<div style={{fontSize:10,fontWeight:700,color:C.textLight,marginBottom:3}}>{msg.user}</div>}
+                <div style={{background:msg.mine?"rgba(26,111,160,0.82)":"rgba(255,255,255,0.7)",padding:"9px 12px",borderRadius:msg.mine?"15px 15px 3px 15px":"15px 15px 15px 3px",fontSize:13,lineHeight:1.5,color:msg.mine?"#fff":C.textDark}}>
+                  {msg.text}
+                </div>
+                <div style={{fontSize:10,color:C.textLight,marginTop:3,textAlign:msg.mine?"right":"left"}}>{msg.time}</div>
+              </div>
+            </div>
+          ))}
+          <div ref={chatEndRef}/>
+        </div>
+        <div style={{borderTop:"1px solid rgba(26,111,160,0.09)",padding:11,display:"flex",gap:8}}>
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Share how you're feeling…"
+            style={{flex:1,background:"rgba(255,255,255,0.6)",border:"1px solid rgba(26,111,160,0.13)",borderRadius:11,color:C.textDark,fontSize:13,padding:"9px 13px",outline:"none"}}/>
+          <button onClick={send} style={{padding:"9px 15px",background:C.blue,border:"none",borderRadius:11,color:"#fff",fontSize:17,cursor:"pointer"}}>→</button>
+        </div>
+      </div>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:8}}>👤 Your Anonymous Name</div>
+        <input value={chatName} onChange={e=>setChatName(e.target.value)} className="field" placeholder="Display name"/>
+      </GCard>
+    </div>
+  );
+};
+
+/* ══ TRENDS TAB ══ */
+const TrendsTab=({history})=>{
+  const chartData=history.slice(-7).map(h=>({day:h.date,Pain:h.painLevel,Score:h.score}));
+  const ttStyle={background:"rgba(255,255,255,0.95)",border:"1px solid rgba(26,111,160,0.18)",borderRadius:10,fontSize:12,color:C.textDark};
+  const trend=history.length>=2?history[history.length-1].painLevel-history[history.length-2].painLevel:0;
+  return(
+    <div>
+      <SectionTitle icon="📈" title="Your Journey" sub={`${history.length} check-ins tracked`}/>
+      <div style={{display:"flex",gap:10,padding:"8px 18px 4px",overflowX:"auto"}}>
+        {[{label:"Avg Pain",value:(history.reduce((a,b)=>a+b.painLevel,0)/history.length).toFixed(1),color:C.red},{label:"Avg Score",value:(history.reduce((a,b)=>a+b.score,0)/history.length).toFixed(0),color:C.blue},{label:"Best Day",value:history.reduce((a,b)=>b.score>a.score?b:a,history[0]).date,color:C.green},{label:"Trend",value:trend>0?`+${trend}↑`:trend<0?`${trend}↓`:"=",color:trend>0?C.red:trend<0?C.green:C.textLight}].map(s=>(
+          <div key={s.label} className="glass" style={{borderRadius:13,padding:"11px 13px",flexShrink:0}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{s.label}</div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:20,color:s.color}}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <GCard style={{marginTop:10}}>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📉 Pain Over Time</div>
+        <div style={{fontSize:11,color:C.textLight,marginBottom:11}}>Lower is better</div>
+        <ResponsiveContainer width="100%" height={130}>
+          <AreaChart data={chartData}>
+            <defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.red} stopOpacity={0.28}/><stop offset="95%" stopColor={C.red} stopOpacity={0}/></linearGradient></defs>
+            <XAxis dataKey="day" tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
+            <YAxis domain={[0,10]} tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false} width={18}/>
+            <Tooltip contentStyle={ttStyle}/>
+            <Area type="monotone" dataKey="Pain" stroke={C.red} strokeWidth={2.5} fill="url(#pg)" dot={{fill:C.red,r:4}}/>
+          </AreaChart>
+        </ResponsiveContainer>
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📈 Recovery Score</div>
+        <div style={{fontSize:11,color:C.textLight,marginBottom:11}}>Higher is better · max 30</div>
+        <ResponsiveContainer width="100%" height={120}>
+          <LineChart data={chartData}>
+            <XAxis dataKey="day" tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
+            <YAxis domain={[0,30]} tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false} width={18}/>
+            <Tooltip contentStyle={ttStyle}/>
+            <Line type="monotone" dataKey="Score" stroke={C.blue} strokeWidth={2.5} dot={{fill:C.blue,r:4}}/>
+          </LineChart>
+        </ResponsiveContainer>
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>🗂 Check-In Log</div>
+        {[...history].reverse().map((entry,i)=>{const sc=entry.score>=20?C.green:entry.score>=12?C.gold:C.red;return(
+          <div key={entry.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:i<history.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{entry.fullDate}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>Pain {entry.painLevel}/10 · {MOODS.find(m=>m.value===entry.mood)?.emoji||"—"} · {entry.checkedCount} checks</div>
+            </div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:24,color:sc}}>{entry.score}</div>
+          </div>
+        );})}
+      </GCard>
+    </div>
+  );
+};
+
+/* ══ PROFILE TAB ══ */
+const ProfileTab=({user,onLogout,onShowPaywall})=>{
+  const isPaid=user?.plan==="monthly"||user?.plan==="annual";
+  const daysLeft=Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  return(
+    <div>
+      <SectionTitle icon="👤" title="Profile" sub="Your account & settings"/>
+      <GCard style={{textAlign:"center",padding:26}}>
+        <div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#1a6fa0,#2d9a6e)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,margin:"0 auto 11px",color:"#fff",fontFamily:"'Montserrat',sans-serif",fontWeight:800}}>
+          {user?.name?.[0]?.toUpperCase()||"U"}
+        </div>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.textDark}}>{user?.name}</div>
+        <div style={{fontSize:13,color:C.textLight,marginTop:3}}>{user?.email}</div>
+        <div style={{marginTop:11,display:"inline-block",padding:"4px 13px",borderRadius:18,background:isPaid?"rgba(45,154,110,0.1)":"rgba(244,162,97,0.1)",fontSize:11,fontWeight:700,color:isPaid?C.green:C.gold}}>
+          {isPaid?"Premium Member":`Free Trial · ${daysLeft} days left`}
+        </div>
+      </GCard>
+      {!isPaid&&<div style={{margin:"0 18px 14px"}}><button className="btn-blue" onClick={onShowPaywall}>⭐ Upgrade to Premium</button></div>}
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>Account</div>
+        {[{icon:"✏️",label:"Edit Profile"},{icon:"🔔",label:"Notifications"},{icon:"🌍",label:"Language"},{icon:"🔒",label:"Privacy Settings"},{icon:"❓",label:"Help & Support"}].map((item,i,arr)=>(
+          <div key={item.label} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+            <span style={{fontSize:17}}>{item.icon}</span>
+            <span style={{flex:1,fontSize:13,fontWeight:600,color:C.textMid}}>{item.label}</span>
+            <span style={{color:C.textLight,fontSize:15}}>›</span>
+          </div>
+        ))}
+      </GCard>
+      <div style={{margin:"0 18px 32px"}}><button className="btn-outline" onClick={onLogout}>Sign Out</button></div>
+    </div>
+  );
+};
+
+/* ══ MAIN APP ══ */
+const MainApp=({user,onLogout,onShowPaywall})=>{
+  const [tab,setTab]=useState("home");
+  const [history,setHistory]=useState(seedHistory);
+  const handleSetTab=(t)=>setTab(t);
+  const renderContent=()=>{
+    switch(tab){
+      case "home": return <HomeTab user={user} onModuleSelect={setTab} onShowPaywall={onShowPaywall} history={history}/>;
+      case "pain": return <PainModule user={user} history={history} setHistory={setHistory} onShowPaywall={onShowPaywall}/>;
+      case "violence": return <ViolenceModule user={user} onShowPaywall={onShowPaywall}/>;
+      case "trauma": return <TraumaModule user={user}/>;
+      case "community": return <CommunityModule user={user}/>;
+      case "trends": return <TrendsTab history={history}/>;
+      case "profile": return <ProfileTab user={user} onLogout={onLogout} onShowPaywall={onShowPaywall}/>;
+      default: return <HomeTab user={user} onModuleSelect={setTab} onShowPaywall={onShowPaywall} history={history}/>;
+    }
+  };
+  const navTab=["home","pain","trauma","community","profile"].includes(tab)?tab:"home";
+  return(
+    <AppShell tab={navTab} setTab={handleSetTab} user={user} onLogout={onLogout}>
+      {renderContent()}
+    </AppShell>
+  );
+};
+
+/* ══ ROOT ══ */
+function App(){
+  const [step,setStep]=useState("login");
+  const [user,setUser]=useState(null);
+  const [vData,setVData]=useState(null);
+  useEffect(()=>{try{const s=sessionStorage.getItem("p2c_session");if(s){const u=JSON.parse(s);setUser(u);setStep("app");}}catch(e){}});
+  const handleLogin=(u)=>{setUser(u);sessionStorage.setItem("p2c_session",JSON.stringify(u));const d=Math.max(0,7-Math.floor((Date.now()-(u.trialStart||Date.now()))/86400000));const paid=u.plan==="monthly"||u.plan==="annual";setStep(!paid&&d===0?"paywall":"app");};
+  const handleReg=({email,code,name})=>{setVData({email,code,name});setStep("verify");};
+  const handleVerified=()=>{const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");const u=users.find(u=>u.email===vData.email);if(u){setUser(u);sessionStorage.setItem("p2c_session",JSON.stringify(u));}setStep("silhouette");};
+  const handleSil=(sel)=>{const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");const idx=users.findIndex(u=>u.email===user?.email);if(idx>=0){users[idx].silhouette=sel;localStorage.setItem("p2c_users",JSON.stringify(users));}setUser(u=>({...u,silhouette:sel}));setStep("welcome");};
+  const handleLogout=()=>{sessionStorage.removeItem("p2c_session");setUser(null);setStep("login");};
+  const handleSub=(plan)=>{const u={...user,plan};setUser(u);sessionStorage.setItem("p2c_session",JSON.stringify(u));setStep("app");};
+  if(step==="login") return<AuthShell><LoginScreen onLogin={handleLogin} onGoRegister={()=>setStep("register")}/></AuthShell>;
+  if(step==="register") return<AuthShell><RegisterScreen onGoLogin={()=>setStep("login")} onRegistered={handleReg}/></AuthShell>;
+  if(step==="verify") return<AuthShell><VerifyScreen email={vData?.email} code={vData?.code} onVerified={handleVerified} onBack={()=>setStep("register")}/></AuthShell>;
+  if(step==="silhouette") return<SilhouetteScreen onContinue={handleSil}/>;
+  if(step==="welcome") return<WelcomeScreen user={user} onContinue={()=>setStep("app")}/>;
+  if(step==="paywall") return<PaywallScreen user={user} onSubscribe={handleSub} onLogout={handleLogout}/>;
+  if(step==="app") return<MainApp user={user} onLogout={handleLogout} onShowPaywall={()=>setStep("paywall")}/>;
+  return null;
 }
-
-async function fetchInsights(){
-  state.aiLoading=true; state.aiInsights=null; render();
-  try{
-    const rows=state.history.slice(-7).map(h=>`${h.fullDate}: Pain ${h.painLevel}/10, Mood ${h.mood}/5, Score ${h.score}/30`).join("\n");
-    const selMood=MOODS.find(m=>m.value===state.mood);
-    const prompt=`You are a compassionate AI assistant specializing in chronic pain and trauma recovery. Analyze this person's data and give warm empathetic insights.\n\n7-day history:\n${rows}\n\nToday: Pain ${state.painLevel}/10 (${painLabel(state.painLevel)}), Mood: ${selMood?selMood.label:"not recorded"}, Areas: ${state.selectedAreas.join(", ")||"none"}, Checks: ${Object.values(state.traumaChecks).filter(Boolean).length}/${TRAUMA_CHECKS.length}\n\nRespond ONLY with valid JSON, no markdown:\n{"headline":"max 8 words","summary":"2-3 sentences","patterns":["p1","p2","p3"],"wins":["w1","w2"],"suggestions":["s1","s2","s3"],"affirmation":"one sentence"}`;
-    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1000,messages:[{role:"user",content:prompt}]})});
-    const data=await res.json();
-    const raw=(data.content||[]).map(i=>i.text||"").join("");
-    state.aiInsights=JSON.parse(raw.replace(/```json|```/g,"").trim());
-  }catch(e){state.aiInsights={error:"Could not load insights. Please try again."};}
-  state.aiLoading=false; render();
-}
-
-async function exportPDF(){
-  state.pdfLoading=true; render();
-  try{
-    const score=Math.round(((10-state.painLevel)*3+(state.mood||3)*4+Object.values(state.traumaChecks).filter(Boolean).length*5)/3);
-    const mod=await import("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
-    const {jsPDF}=mod.default||mod; const doc=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-    const W=210,P=20;
-    doc.setFillColor(255,77,109);doc.rect(0,0,W,30,"F");
-    doc.setTextColor(255,255,255);doc.setFontSize(24);doc.setFont("helvetica","bold");doc.text("RISETHROUGH",P,14);
-    doc.setFontSize(10);doc.setFont("helvetica","normal");doc.text("Daily Pain & Recovery Report",P,22);
-    doc.text(new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}),W-P,22,{align:"right"});
-    let y=42;const sc=score>=20?[0,201,141]:score>=12?[255,140,66]:[255,77,109];
-    doc.setFillColor(18,18,26);doc.roundedRect(P,y,W-P*2,32,4,4,"F");
-    doc.setTextColor(...sc);doc.setFontSize(30);doc.setFont("helvetica","bold");doc.text(String(score),P+10,y+21);
-    doc.setTextColor(160,160,180);doc.setFontSize(11);doc.setFont("helvetica","normal");doc.text("Recovery Index (out of 30)",P+28,y+12);
-    doc.setFontSize(9);doc.text(score>=20?"Keep pushing!":score>=12?"You're doing okay":"Be gentle with yourself",P+28,y+22);y+=40;
-    const selMood=MOODS.find(m=>m.value===state.mood);
-    const section=(title,rows)=>{const h=12+rows.length*9;doc.setFillColor(22,22,35);doc.roundedRect(P,y,W-P*2,h,4,4,"F");doc.setTextColor(255,77,109);doc.setFontSize(10);doc.setFont("helvetica","bold");doc.text(title,P+6,y+8);rows.forEach((row,i)=>{doc.setTextColor(140,140,165);doc.setFontSize(9);doc.setFont("helvetica","normal");doc.text(row.label,P+6,y+16+i*9);doc.setTextColor(220,218,230);doc.text(row.value,W-P-6,y+16+i*9,{align:"right"});});y+=h+6;};
-    section("PAIN SNAPSHOT",[{label:"Pain Level",value:`${state.painLevel}/10 — ${painLabel(state.painLevel)}`},{label:"Mood",value:selMood?selMood.label:"Not recorded"},{label:"Areas",value:state.selectedAreas.length?state.selectedAreas.join(", "):"None"},{label:"Checks",value:`${Object.values(state.traumaChecks).filter(Boolean).length} of ${TRAUMA_CHECKS.length}`}]);
-    section("7-DAY TREND",state.history.slice(-7).map(h=>({label:h.fullDate,value:`Pain ${h.painLevel}/10  Score ${h.score}/30`})));
-    doc.setFillColor(255,77,109);doc.rect(0,285,W,12,"F");doc.setTextColor(255,255,255);doc.setFontSize(8);doc.setFont("helvetica","normal");doc.text("RiseThrough — Chronic Pain & Trauma Recovery",P,292);doc.text("Generated "+new Date().toLocaleString(),W-P,292,{align:"right"});
-    doc.save(`RiseThrough_${new Date().toISOString().split("T")[0]}.pdf`);
-  }catch(err){alert("PDF export failed.");}
-  state.pdfLoading=false; render();
-}
-
-function bindEvents(){}
-
-// ── BOOT ──────────────────────────────────────────────────────
-render();
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
