@@ -9,6 +9,81 @@
 <meta name="theme-color" content="#FF4D6D"/>
 <title>RiseThrough</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, set, get, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCHu8EZEVUYFGDueH06mAhaxZeMEeTD4qU",
+    authDomain: "pain2care.firebaseapp.com",
+    databaseURL: "https://pain2care-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "pain2care",
+    storageBucket: "pain2care.firebasestorage.app",
+    messagingSenderId: "936766185723",
+    appId: "1:936766185723:web:78c7ef648e9e62a4fb105e"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getDatabase(app);
+
+  // Expose to global scope for use in main script
+  window.fbAuth = auth;
+  window.fbDb = db;
+  window.fbFns = { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, ref, set, get, push, onValue };
+
+  // Listen for auth state changes
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.state.currentUser = { name: user.displayName || user.email.split('@')[0], email: user.email, uid: user.uid, plan: "trial", trialStart: Date.now() };
+      // Load user data from Firebase
+      const userRef = window.fbFns.ref(window.fbDb, 'users/' + user.uid);
+      window.fbFns.get(userRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          window.state.currentUser = { ...window.state.currentUser, ...data };
+          window.state.history = data.history ? Object.values(data.history) : window.state.history;
+        }
+        window.state.authStep = 'app';
+        window.state.chatName = window.state.currentUser.name;
+        window.render();
+      });
+    } else {
+      if (window.state.authStep === 'app') {
+        window.state.authStep = 'login';
+        window.render();
+      }
+    }
+  });
+
+  // Save checkin to Firebase
+  window.saveCheckin = async (entry) => {
+    if (!auth.currentUser) return;
+    const uid = auth.currentUser.uid;
+    await window.fbFns.set(window.fbFns.ref(window.fbDb, 'users/' + uid + '/history/' + entry.id), entry);
+  };
+
+  // Firebase auth functions
+  window.firebaseLogin = async (email, pass) => {
+    return window.fbFns.signInWithEmailAndPassword(auth, email, pass);
+  };
+
+  window.firebaseRegister = async (email, pass, name) => {
+    const cred = await window.fbFns.createUserWithEmailAndPassword(auth, email, pass);
+    await window.fbFns.updateProfile(cred.user, { displayName: name });
+    // Save user profile to database
+    await window.fbFns.set(window.fbFns.ref(window.fbDb, 'users/' + cred.user.uid), {
+      name, email, plan: 'trial', trialStart: Date.now(), createdAt: Date.now()
+    });
+    return cred;
+  };
+
+  window.firebaseLogout = async () => {
+    await window.fbFns.signOut(auth);
+  };
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#0A0A0F;font-family:'Barlow',sans-serif;color:#F0EEF6;overscroll-behavior:none;max-width:430px;margin:0 auto;min-height:100vh}
@@ -625,7 +700,6 @@ function communityHTML() {
 function getHTML() {
   if(state.authStep==="login") return loginHTML();
   if(state.authStep==="register") return registerHTML();
-  if(state.authStep==="verify") return verifyHTML();
   if(state.authStep==="welcome") return welcomeHTML();
   if(state.authStep==="paywall") return paywallHTML();
   // App
@@ -651,19 +725,13 @@ function doLogin(){
   if(state.loginPass.length<6) e.pass="Password must be at least 6 characters";
   if(Object.keys(e).length){state.loginErrors=e;render();return;}
   state.loginLoading=true; render();
-  setTimeout(()=>{
-    const users=JSON.parse(localStorage.getItem("rt_users")||"[]");
-    const user=users.find(u=>u.email===state.loginEmail&&u.password===state.loginPass);
-    if(!user){state.loginErrors={pass:"Incorrect email or password"};state.loginLoading=false;render();return;}
-    if(!user.verified){state.loginErrors={pass:"Please verify your email first."};state.loginLoading=false;render();return;}
-    state.loginLoading=false;
-    state.currentUser=user;
-    state.chatName=user.name||"You";
-    sessionStorage.setItem("rt_session",JSON.stringify(user));
-    const dl=daysLeft(user);
-    state.authStep=(!isPaid(user)&&dl===0)?"paywall":"app";
-    render();
-  },800);
+  window.firebaseLogin(state.loginEmail, state.loginPass)
+    .then(()=>{ state.loginLoading=false; })
+    .catch(err=>{
+      state.loginLoading=false;
+      state.loginErrors={pass:"Incorrect email or password"};
+      render();
+    });
 }
 
 function doRegister(){
@@ -675,15 +743,14 @@ function doRegister(){
   if(!state.regAgreed) e.agreed="Please accept the terms";
   if(Object.keys(e).length){state.regErrors=e;render();return;}
   state.regLoading=true; render();
-  setTimeout(()=>{
-    const users=JSON.parse(localStorage.getItem("rt_users")||"[]");
-    if(users.find(u=>u.email===state.regEmail)){state.regErrors={email:"Email already registered"};state.regLoading=false;render();return;}
-    const code=Math.floor(100000+Math.random()*900000).toString();
-    const newUser={name:state.regName.trim(),email:state.regEmail,password:state.regPass,verified:false,verifyCode:code,trialStart:Date.now(),createdAt:Date.now(),plan:"trial"};
-    users.push(newUser); localStorage.setItem("rt_users",JSON.stringify(users));
-    state.verifyData={email:state.regEmail,code,name:state.regName.trim()};
-    state.regLoading=false; state.authStep="verify"; render();
-  },900);
+  window.firebaseRegister(state.regEmail, state.regPass, state.regName.trim())
+    .then(()=>{ state.regLoading=false; })
+    .catch(err=>{
+      state.regLoading=false;
+      if(err.code==='auth/email-already-in-use') state.regErrors={email:"Email already registered"};
+      else state.regErrors={email:"Registration failed. Try again."};
+      render();
+    });
 }
 
 function handleDigit(i,val){
@@ -725,10 +792,11 @@ function doSubscribe(){
 }
 
 function logout(){
-  sessionStorage.removeItem("rt_session");
-  state.currentUser=null; state.authStep="login";
-  state.loginEmail=""; state.loginPass=""; state.loginErrors={};
-  render();
+  window.firebaseLogout().then(()=>{
+    state.currentUser=null; state.authStep="login";
+    state.loginEmail=""; state.loginPass=""; state.loginErrors={};
+    render();
+  });
 }
 
 function toggleArea(area){
@@ -751,10 +819,13 @@ function toggleCheck(id){
 
 function submitCheckin(){
   const score=Math.round(((10-state.painLevel)*3+(state.mood||3)*4+Object.values(state.traumaChecks).filter(Boolean).length*5)/3);
-  state.history=[...state.history.slice(-13),{id:Date.now(),date:new Date().toLocaleDateString("en-US",{weekday:"short"}),
+  const entry = {id:Date.now(),date:new Date().toLocaleDateString("en-US",{weekday:"short"}),
     fullDate:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric"}),
     painLevel:state.painLevel,mood:state.mood,checkedCount:Object.values(state.traumaChecks).filter(Boolean).length,
-    notes:state.notes,score}];
+    notes:state.notes,score};
+  state.history=[...state.history.slice(-13), entry];
+  // Save to Firebase
+  if(window.saveCheckin) window.saveCheckin(entry);
   state.aiInsights=null; state.screen="results"; render();
 }
 
