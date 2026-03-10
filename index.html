@@ -11,7 +11,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -41,7 +40,32 @@ textarea{font-family:'Nunito',sans-serif}
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
 const {useState,useRef,useEffect}=React;
-const {AreaChart,Area,LineChart,Line,XAxis,YAxis,Tooltip,ResponsiveContainer}=Recharts;
+
+const MiniChart=({data,color,maxVal,height=120,filled=false})=>{
+  const W=320,H=height,padX=8,padY=16,pts=data.length;
+  if(!pts||pts<2) return null;
+  const xs=data.map((_,i)=>padX+(i/(pts-1))*(W-padX*2));
+  const ys=data.map(d=>padY+((maxVal-d.v)/(maxVal))*(H-padY*2));
+  const line=xs.map((x,i)=>`${i===0?"M":"L"}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(" ");
+  const area=line+` L${xs[pts-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`;
+  const gid="g"+color.replace(/[^a-z0-9]/gi,"");
+  return(
+    <svg viewBox={`0 0 ${W} ${H+20}`} width="100%" style={{display:"block"}}>
+      <defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity="0.3"/>
+        <stop offset="100%" stopColor={color} stopOpacity="0"/>
+      </linearGradient></defs>
+      {filled&&<path d={area} fill={`url(#${gid})`}/>}
+      <path d={line} stroke={color} strokeWidth="2.5" fill="none" strokeLinejoin="round" strokeLinecap="round"/>
+      {data.map((d,i)=>(
+        <g key={i}>
+          <circle cx={xs[i]} cy={ys[i]} r="4" fill={color}/>
+          <text x={xs[i]} y={H+16} textAnchor="middle" fontSize="9" fill="#6b95ad">{d.day}</text>
+        </g>
+      ))}
+    </svg>
+  );
+};
 
 const C={
   blue:"#1a6fa0",blueMid:"#2196c4",blueLight:"#5bb8e8",
@@ -830,7 +854,6 @@ const CommunityModule=({user})=>{
 /* ══ TRENDS TAB ══ */
 const TrendsTab=({history})=>{
   const chartData=history.slice(-7).map(h=>({day:h.date,Pain:h.painLevel,Score:h.score}));
-  const ttStyle={background:"rgba(255,255,255,0.95)",border:"1px solid rgba(26,111,160,0.18)",borderRadius:10,fontSize:12,color:C.textDark};
   const trend=history.length>=2?history[history.length-1].painLevel-history[history.length-2].painLevel:0;
   return(
     <div>
@@ -845,28 +868,13 @@ const TrendsTab=({history})=>{
       </div>
       <GCard style={{marginTop:10}}>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📉 Pain Over Time</div>
-        <div style={{fontSize:11,color:C.textLight,marginBottom:11}}>Lower is better</div>
-        <ResponsiveContainer width="100%" height={130}>
-          <AreaChart data={chartData}>
-            <defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={C.red} stopOpacity={0.28}/><stop offset="95%" stopColor={C.red} stopOpacity={0}/></linearGradient></defs>
-            <XAxis dataKey="day" tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
-            <YAxis domain={[0,10]} tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false} width={18}/>
-            <Tooltip contentStyle={ttStyle}/>
-            <Area type="monotone" dataKey="Pain" stroke={C.red} strokeWidth={2.5} fill="url(#pg)" dot={{fill:C.red,r:4}}/>
-          </AreaChart>
-        </ResponsiveContainer>
+        <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Lower is better</div>
+        <MiniChart data={chartData.map(d=>({v:d.Pain,day:d.day}))} color={C.red} maxVal={10} height={100} filled={true}/>
       </GCard>
       <GCard>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📈 Recovery Score</div>
-        <div style={{fontSize:11,color:C.textLight,marginBottom:11}}>Higher is better · max 30</div>
-        <ResponsiveContainer width="100%" height={120}>
-          <LineChart data={chartData}>
-            <XAxis dataKey="day" tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
-            <YAxis domain={[0,30]} tick={{fill:C.textLight,fontSize:10}} axisLine={false} tickLine={false} width={18}/>
-            <Tooltip contentStyle={ttStyle}/>
-            <Line type="monotone" dataKey="Score" stroke={C.blue} strokeWidth={2.5} dot={{fill:C.blue,r:4}}/>
-          </LineChart>
-        </ResponsiveContainer>
+        <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Higher is better · max 30</div>
+        <MiniChart data={chartData.map(d=>({v:d.Score,day:d.day}))} color={C.blue} maxVal={30} height={100} filled={false}/>
       </GCard>
       <GCard>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>🗂 Check-In Log</div>
