@@ -1287,6 +1287,9 @@ const ViolenceModule=({user,onShowPaywall,onBack})=>{
       </GCard>
     </div>
   );
+
+  // PIN Entry screen (for Secure Photos)
+  if(screen==="pinEntry") return(
     <div style={{animation:"fadeIn 0.3s ease both"}}>
       <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
         <button onClick={()=>{setScreen("main");setPinInput("");setPinError("");}} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
