@@ -186,37 +186,37 @@ const TRANSLATIONS={
     noDataSub:"Completa tu primer registro para ver tendencias.",startCheckIn:"Iniciar registro \u2192",
     avgScore:"Puntuación prom.",bestDay:"Mejor día",trend:"Tendencia",
   },
-  ar:{
-    hello:"مرحباً",howFeeling:"كيف تشعر اليوم؟",
-    todayReminder:"تذكير اليوم",yourModules:"وحداتك",
-    painModule:"وحدة الألم",chronicPain:"ألم مزمن",
-    violenceReport:"تقرير العنف",documentation:"توثيق",
-    communityChat:"دردشة المجتمع",anonymous:"مجهول",
-    traumaRecovery:"التعافي من الصدمة",selfGuided:"موجّه ذاتياً",
-    painHistory:"سجل الألم والاتجاهات",checkInsRecorded:n=>`${n} تسجيل`,
-    lastPain:"آخر ألم",avgPain:"متوسط الألم",checkIns:"التسجيلات",
-    logCheckIn:"تسجيل فحص الألم \u2192",newCheckIn:"+ تسجيل جديد",
-    home:"الرئيسية",pain:"الألم",safety:"الأمان",recovery:"التعافي",chat:"دردشة",profile:"الملف",
-    daysLeft:n=>`${n} أيام متبقية`,tapToUpgrade:"اضغط للترقية",
-    trackTab:"\uD83E\uDE7A تتبع",historyTab:"\uD83D\uDCC8 السجل",noDataYet:"لا توجد بيانات بعد",
-    noDataSub:"أكمل أول تسجيل لرؤية الاتجاهات.",startCheckIn:"بدء التسجيل \u2192",
-    avgScore:"متوسط النقاط",bestDay:"أفضل يوم",trend:"الاتجاه",
+  fr:{
+    hello:"Bonjour",howFeeling:"Comment vous sentez-vous aujourd'hui?",
+    todayReminder:"Rappel du jour",yourModules:"Vos modules",
+    painModule:"Module douleur",chronicPain:"Douleur chronique",
+    violenceReport:"Rapport de violence",documentation:"Documentation",
+    communityChat:"Chat communautaire",anonymous:"Anonyme",
+    traumaRecovery:"Retablissement du trauma",selfGuided:"Auto-guide",
+    painHistory:"Historique de la douleur",checkInsRecorded:n=>`${n} enregistrement${n!==1?"s":""} · voir votre parcours`,
+    lastPain:"Derniere douleur",avgPain:"Douleur moy.",checkIns:"Enregistrements",
+    logCheckIn:"Enregistrer la douleur \u2192",newCheckIn:"+ Nouvel enregistrement",
+    home:"ACCUEIL",pain:"DOULEUR",safety:"SECURITE",recovery:"RETABL.",chat:"CHAT",profile:"PROFIL",
+    daysLeft:n=>`${n} jours d'essai restants`,tapToUpgrade:"Appuyez pour mettre a niveau",
+    trackTab:"\uD83E\uDE7A Suivre",historyTab:"\uD83D\uDCC8 Historique",noDataYet:"Pas encore de donnees",
+    noDataSub:"Completez votre premier enregistrement pour voir les tendances.",startCheckIn:"Commencer \u2192",
+    avgScore:"Score moy.",bestDay:"Meilleur jour",trend:"Tendance",
   },
-  so:{
-    hello:"Salaan",howFeeling:"Sideed u danaynaysaa maanta?",
-    todayReminder:"Xusuusin maanta",yourModules:"Moodulashaada",
-    painModule:"Moodulka xanuunka",chronicPain:"Xanuun joogto ah",
-    violenceReport:"Warbixinta rabshadaha",documentation:"Diiwaangelinta",
-    communityChat:"Sheekada bulshada",anonymous:"Magac la\'aaan",
-    traumaRecovery:"Bogsiinta dhaawaca",selfGuided:"Iskaa-hoggaamiya",
-    painHistory:"Taariikhdа xanuunka",checkInsRecorded:n=>`${n} diiwaangelinta`,
-    lastPain:"Xanuunkii dambe",avgPain:"Xanuun dhexdhexaad",checkIns:"Diiwaangelinaha",
-    logCheckIn:"Diiwangeli xanuunka \u2192",newCheckIn:"+ Diiwaangelin cusub",
-    home:"HOYGA",pain:"XANUUN",safety:"AMAAN",recovery:"BOGSIIN",chat:"SHEEKO",profile:"PROFILE",
-    daysLeft:n=>`${n} maalmood oo tijaabo`,tapToUpgrade:"Taabo si aad u cusboonaysiiso",
-    trackTab:"\uD83E\uDE7A Raadi",historyTab:"\uD83D\uDCC8 Taariikhda",noDataYet:"Wali xog ma jirto",
-    noDataSub:"Diiwaangeli markii ugu horreysa.",startCheckIn:"Bilow diiwaangelinta \u2192",
-    avgScore:"Dhibcaha dhexdhexaadka",bestDay:"Maalinta ugu fiican",trend:"Jihada",
+  pt:{
+    hello:"Ola",howFeeling:"Como voce esta se sentindo hoje?",
+    todayReminder:"Lembrete de hoje",yourModules:"Seus modulos",
+    painModule:"Modulo de dor",chronicPain:"Dor cronica",
+    violenceReport:"Relatorio de violencia",documentation:"Documentacao",
+    communityChat:"Chat da comunidade",anonymous:"Anonimo",
+    traumaRecovery:"Recuperacao do trauma",selfGuided:"Auto-guiado",
+    painHistory:"Historico de dor e tendencias",checkInsRecorded:n=>`${n} registro${n!==1?"s":""} · ver sua jornada`,
+    lastPain:"Ultima dor",avgPain:"Dor media",checkIns:"Registros",
+    logCheckIn:"Registrar controle de dor \u2192",newCheckIn:"+ Novo registro",
+    home:"INICIO",pain:"DOR",safety:"SEGURANCA",recovery:"RECUPER.",chat:"CHAT",profile:"PERFIL",
+    daysLeft:n=>`${n} dias de teste restantes`,tapToUpgrade:"Toque para atualizar",
+    trackTab:"\uD83E\uDE7A Registrar",historyTab:"\uD83D\uDCC8 Historico",noDataYet:"Sem dados ainda",
+    noDataSub:"Complete seu primeiro registro para ver tendencias.",startCheckIn:"Iniciar registro \u2192",
+    avgScore:"Pontuacao media",bestDay:"Melhor dia",trend:"Tendencia",
   },
 };
 const getLang=(user)=>{
@@ -2478,14 +2478,15 @@ const LanguageScreen=({onBack,user})=>{
     {code:"sv",flag:"🇸🇪",label:"Svenska (Swedish)"},
     {code:"de",flag:"🇩🇪",label:"Deutsch (German)"},
     {code:"es",flag:"🇪🇸",label:"Español (Spanish)"},
-    {code:"ar",flag:"🇸🇦",label:"العربية (Arabic)"},
-    {code:"so",flag:"🇸🇴",label:"Soomaali (Somali)"},
+    {code:"fr",flag:"🇫🇷",label:"Français (French)"},
+    {code:"pt",flag:"🇵🇹",label:"Português (Portuguese)"},
   ];
   return(
     <div style={{animation:"fadeIn 0.3s ease both"}}>
       <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
         <button onClick={onBack} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
         <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.textDark}}>🌍 Language</div>
+        <button onClick={()=>{localStorage.setItem(key,selected);onBack();}} style={{marginLeft:"auto",background:"linear-gradient(135deg,#1a6fa0,#0e4f78)",border:"none",borderRadius:9,padding:"5px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer"}}>💾 Save</button>
       </div>
       <GCard style={{marginTop:14}}>
         {langs.map((lang,i,arr)=>(
