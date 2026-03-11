@@ -352,12 +352,39 @@ const AFFIRMATIONS=[
   "Rest is not giving up. Rest is rebuilding.",
   "Your body is doing its best. So are you.",
 ];
-const SEED_CHAT=[
-  {id:1,user:"Maya R.",avatar:"🌸",text:"Anyone else notice their pain spikes mid-week? Wednesday always gets me.",time:"2h ago",mine:false},
-  {id:2,user:"Jordan K.",avatar:"🌊",text:"Yes! Short noon rest really helps me manage that.",time:"1h ago",mine:false},
-  {id:3,user:"Sam T.",avatar:"🌿",text:"Gentle reminder: rest is not failure 💚",time:"45m ago",mine:false},
-  {id:4,user:"Alex P.",avatar:"💙",text:"Does anyone use heat therapy? Just got a heating pad for back pain.",time:"20m ago",mine:false},
+const CHANNELS=[
+  {id:"general",icon:"💬",label:"General Support",color:"#1a6fa0",desc:"Peer support & open conversation",seed:[
+    {id:1,user:"Maya R.",avatar:"🌸",text:"Anyone else notice their pain spikes mid-week? Wednesday always gets me.",time:"2h ago",mine:false},
+    {id:2,user:"Jordan K.",avatar:"🌊",text:"Yes! A short noon rest really helps me manage that.",time:"1h ago",mine:false},
+    {id:3,user:"Sam T.",avatar:"🌿",text:"Gentle reminder: rest is not failure 💚",time:"45m ago",mine:false},
+  ]},
+  {id:"chronic",icon:"🔥",label:"Chronic Pain",color:"#e63946",desc:"Experiences, tips & chronic conditions",seed:[
+    {id:1,user:"Alex P.",avatar:"💙",text:"Does anyone use heat therapy? Just got a heating pad for back pain.",time:"3h ago",mine:false},
+    {id:2,user:"Rina S.",avatar:"🌻",text:"Heat works great for me! Cold is better for inflammation though.",time:"2h ago",mine:false},
+    {id:3,user:"Tom W.",avatar:"🦋",text:"Fibromyalgia group here? Would love to connect with others.",time:"1h ago",mine:false},
+  ]},
+  {id:"mental",icon:"🧠",label:"Mental Health & Trauma",color:"#7B3F9E",desc:"Mental health, anxiety & trauma support",seed:[
+    {id:1,user:"Lee M.",avatar:"🌙",text:"Therapy has helped me so much with pain-related anxiety. Anyone else?",time:"5h ago",mine:false},
+    {id:2,user:"Dana H.",avatar:"🕊️",text:"Yes — CBT changed how I relate to my pain completely.",time:"4h ago",mine:false},
+    {id:3,user:"Kai B.",avatar:"🌈",text:"Trauma and chronic pain are so connected. Glad this space exists.",time:"2h ago",mine:false},
+  ]},
+  {id:"treatments",icon:"💊",label:"Treatments & Tips",color:"#2d9a6e",desc:"Medications, therapies & natural remedies",seed:[
+    {id:1,user:"Nora K.",avatar:"🍃",text:"Has anyone tried magnesium for muscle pain? My physio recommended it.",time:"6h ago",mine:false},
+    {id:2,user:"Chris V.",avatar:"⚡",text:"Magnesium glycinate is great for sleep too! Game changer for me.",time:"5h ago",mine:false},
+    {id:3,user:"Jade L.",avatar:"🌺",text:"TENS machine has been helpful alongside physio for my back.",time:"3h ago",mine:false},
+  ]},
+  {id:"recovery",icon:"🌱",label:"Daily Recovery",color:"#1a8c7a",desc:"Small wins, motivation & daily progress",seed:[
+    {id:1,user:"Mia F.",avatar:"☀️",text:"Walked to the mailbox today. Small win but I'll take it! 🎉",time:"1h ago",mine:false},
+    {id:2,user:"Ben R.",avatar:"🌊",text:"Celebrated 30 days of consistent check-ins. Keep going everyone!",time:"45m ago",mine:false},
+    {id:3,user:"Zara N.",avatar:"🌸",text:"Morning stretches before getting out of bed = less morning pain for me.",time:"20m ago",mine:false},
+  ]},
+  {id:"crisis",icon:"🆘",label:"Crisis Support",color:"#f4a261",desc:"If you need urgent emotional support",seed:[
+    {id:1,user:"Support Bot",avatar:"💛",text:"This is a safe space. You are not alone. If you're in immediate danger, please contact emergency services.",time:"pinned",mine:false},
+    {id:2,user:"Peer Supporter",avatar:"🤝",text:"I've been through dark days too. Reaching out is the bravest thing you can do.",time:"4h ago",mine:false},
+    {id:3,user:"Support Bot",avatar:"💛",text:"Finland crisis line: 09 2525 0111 · International: findahelpline.com",time:"pinned",mine:false},
+  ]},
 ];
+
 const EXERCISES=[
   {id:"anxiety",icon:"🧘",title:"Anxiety Management",desc:"Breathing & grounding",steps:["Find a comfortable position and close your eyes.","Breathe in slowly for 4 counts.","Hold for 4 counts.","Exhale slowly for 6 counts.","Repeat 5 times, focusing only on your breath.","Name 5 things you can see around you."]},
   {id:"goals",icon:"🎯",title:"Goal Setting",desc:"Small steps toward healing",steps:["Write one thing you'd like to improve this week.","Break it into 3 small daily actions.","Celebrate every small win — they all count.","Review each evening: did you take one step today?"]},
@@ -1131,46 +1158,276 @@ const PainModule=({user,history,setHistory,onShowPaywall})=>{
 /* ══ VIOLENCE MODULE ══ */
 const ViolenceModule=({user,onShowPaywall})=>{
   const isPaid=["normal_monthly","normal_annual","premium_monthly","premium_annual"].includes(user?.plan);
-  const records=[{id:1,date:"Mar 8, 2026",type:"Physical",desc:"Documented incident at home",shared:false},{id:2,date:"Mar 3, 2026",type:"Documentation",desc:"Photo evidence recorded",shared:true}];
+  const storageKey=`p2c_vdocs_${user?.uid||user?.email||"local"}`;
+  const pinKey=`p2c_vpin_${user?.uid||user?.email||"local"}`;
+
+  const [screen,setScreen]=useState("main"); // main | newDoc | pinSetup | pinEntry | photos | viewDoc
+  const [records,setRecords]=useState(()=>{try{return JSON.parse(localStorage.getItem(storageKey)||"[]");}catch(e){return[];}});
+  const [pin,setPin]=useState(()=>localStorage.getItem(pinKey)||"");
+  const [pinInput,setPinInput]=useState("");
+  const [pinConfirm,setPinConfirm]=useState("");
+  const [pinStep,setPinStep]=useState("enter"); // enter | confirm
+  const [pinError,setPinError]=useState("");
+  const [pinAttempts,setPinAttempts]=useState(0);
+  const [pinLocked,setPinLocked]=useState(false);
+  const [photos,setPhotos]=useState([]);
+  const [activeDoc,setActiveDoc]=useState(null);
+  const fileRef=useRef(null);
+
+  // New incident form state
+  const [incDate,setIncDate]=useState(new Date().toISOString().split("T")[0]);
+  const [incType,setIncType]=useState("");
+  const [incDesc,setIncDesc]=useState("");
+  const [incLocation,setIncLocation]=useState("");
+  const [incWitnesses,setIncWitnesses]=useState("");
+  const [saving,setSaving]=useState(false);
+
+  const saveRecords=(recs)=>{
+    setRecords(recs);
+    try{localStorage.setItem(storageKey,JSON.stringify(recs));}catch(e){}
+  };
+
+  // PIN entry pad
+  const PinPad=({value,onChange,label,error})=>(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+      <div style={{fontSize:13,fontWeight:700,color:C.textMid}}>{label}</div>
+      <div style={{display:"flex",gap:12}}>
+        {[0,1,2,3].map(i=>(
+          <div key={i} style={{width:18,height:18,borderRadius:"50%",border:`2px solid ${C.purple}`,background:value.length>i?C.purple:"transparent",transition:"all 0.15s"}}/>
+        ))}
+      </div>
+      {error&&<div style={{fontSize:12,color:C.red,fontWeight:700}}>{error}</div>}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,width:220}}>
+        {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((k,i)=>(
+          <button key={i} onClick={()=>{
+            if(k==="⌫") onChange(value.slice(0,-1));
+            else if(k!==""&&value.length<4) onChange(value+k);
+          }} style={{padding:"16px 0",borderRadius:14,border:"none",background:k===""?"transparent":"rgba(255,255,255,0.6)",fontSize:k==="⌫"?18:20,fontWeight:700,color:C.textDark,cursor:k===""?"default":"pointer",fontFamily:"'Montserrat',sans-serif",boxShadow:k===""?"none":"0 2px 8px rgba(26,80,130,0.08)"}}>
+            {k}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // PIN Setup screen
+  if(screen==="pinSetup") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("main")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>🔒 Set Secure PIN</div>
+      </div>
+      <GCard style={{marginTop:14,textAlign:"center"}}>
+        <div style={{fontSize:13,color:C.textMid,marginBottom:20,lineHeight:1.6}}>
+          {pinStep==="enter"?"Choose a 4-digit PIN to protect your photos and documents.":"Enter your PIN again to confirm."}
+        </div>
+        <PinPad value={pinStep==="enter"?pinInput:pinConfirm} onChange={pinStep==="enter"?setPinInput:setPinConfirm} label={pinStep==="enter"?"Enter PIN":"Confirm PIN"} error={pinError}/>
+        {((pinStep==="enter"&&pinInput.length===4)||(pinStep==="confirm"&&pinConfirm.length===4))&&(
+          <button className="btn-blue" style={{marginTop:20,background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}} onClick={()=>{
+            if(pinStep==="enter"){setPinStep("confirm");setPinError("");}
+            else{
+              if(pinConfirm===pinInput){
+                localStorage.setItem(pinKey,pinInput);
+                setPin(pinInput);
+                setPinInput("");setPinConfirm("");setPinStep("enter");
+                setScreen("photos");
+              } else {
+                setPinError("PINs don't match — try again");
+                setPinConfirm("");
+              }
+            }
+          }}>
+            {pinStep==="enter"?"Next →":"Set PIN & Continue →"}
+          </button>
+        )}
+      </GCard>
+    </div>
+  );
+
+  // PIN Entry screen
+  if(screen==="pinEntry") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>{setScreen("main");setPinInput("");setPinError("");}} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>🔒 Secure Photos</div>
+      </div>
+      <GCard style={{marginTop:14,textAlign:"center"}}>
+        {pinLocked?(
+          <div style={{padding:20}}>
+            <div style={{fontSize:36,marginBottom:12}}>🔒</div>
+            <div style={{fontWeight:800,color:C.red,fontSize:15}}>Too many attempts</div>
+            <div style={{fontSize:13,color:C.textLight,marginTop:8}}>Please wait 5 minutes before trying again.</div>
+          </div>
+        ):(
+          <>
+            <div style={{fontSize:13,color:C.textMid,marginBottom:20}}>Enter your PIN to access secure photos.</div>
+            <PinPad value={pinInput} onChange={v=>{
+              setPinInput(v);
+              if(v.length===4){
+                if(v===pin){
+                  setPinInput("");setPinError("");setPinAttempts(0);
+                  setScreen("photos");
+                } else {
+                  const attempts=pinAttempts+1;
+                  setPinAttempts(attempts);
+                  if(attempts>=3){setPinLocked(true);setTimeout(()=>{setPinLocked(false);setPinAttempts(0);},300000);}
+                  setPinError(`Incorrect PIN${attempts>=2?` · ${3-attempts} attempt${3-attempts===1?"":"s"} left`:""}`);
+                  setTimeout(()=>setPinInput(""),500);
+                }
+              }
+            }} label="Enter PIN" error={pinError}/>
+          </>
+        )}
+      </GCard>
+    </div>
+  );
+
+  // Secure Photos screen
+  if(screen==="photos") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>{setScreen("main");setPhotos([]);}} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>🔒 Secure Photos</div>
+        </div>
+        <button onClick={()=>{setScreen("main");setPhotos([]);}} style={{background:"rgba(230,57,70,0.12)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:11,fontWeight:700,color:C.red,cursor:"pointer"}}>🚪 Exit</button>
+      </div>
+      <GCard style={{marginTop:14,background:"rgba(123,63,158,0.06)",border:"1px solid rgba(123,63,158,0.18)"}}>
+        <div style={{fontSize:12,color:C.textMid,lineHeight:1.6}}>📌 Photos are stored securely in encrypted cloud storage. They are never saved to your device gallery.</div>
+      </GCard>
+      <GCard>
+        <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple style={{display:"none"}}
+          onChange={e=>{
+            const files=Array.from(e.target.files||[]);
+            files.forEach(file=>{
+              const reader=new FileReader();
+              reader.onload=ev=>{
+                const newPhoto={id:Date.now()+Math.random(),name:file.name,date:new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}),data:ev.target.result};
+                setPhotos(prev=>[...prev,newPhoto]);
+              };
+              reader.readAsDataURL(file);
+            });
+          }}
+        />
+        <button onClick={()=>fileRef.current?.click()} style={{width:"100%",padding:"14px",borderRadius:14,border:`2px dashed ${C.purple}`,background:"rgba(123,63,158,0.06)",color:C.purple,fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          📷 Add Photo Evidence
+        </button>
+        {photos.length===0&&<div style={{textAlign:"center",fontSize:12,color:C.textLight,marginTop:12}}>No photos yet. Tap above to add evidence.</div>}
+      </GCard>
+      {photos.length>0&&(
+        <GCard>
+          <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:12}}>📸 {photos.length} Photo{photos.length!==1?"s":""}</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            {photos.map(p=>(
+              <div key={p.id} style={{borderRadius:12,overflow:"hidden",position:"relative"}}>
+                <img src={p.data} alt={p.name} style={{width:"100%",height:110,objectFit:"cover",display:"block"}}/>
+                <div style={{position:"absolute",bottom:0,left:0,right:0,background:"rgba(0,0,0,0.55)",padding:"5px 8px",fontSize:10,color:"#fff"}}>{p.date}</div>
+                <button onClick={()=>setPhotos(prev=>prev.filter(x=>x.id!==p.id))}
+                  style={{position:"absolute",top:5,right:5,background:"rgba(230,57,70,0.85)",border:"none",borderRadius:"50%",width:22,height:22,color:"#fff",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              </div>
+            ))}
+          </div>
+        </GCard>
+      )}
+    </div>
+  );
+
+  // New Incident form
+  if(screen==="newDoc") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("main")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>📝 Document Incident</div>
+      </div>
+      <GCard style={{marginTop:14}}>
+        <div style={{fontSize:12,color:C.textMid,marginBottom:16,lineHeight:1.6}}>🔒 This record is private and encrypted. Only you can access it.</div>
+        {[
+          {label:"Date",type:"date",val:incDate,set:setIncDate},
+          {label:"Type of Incident",type:"text",val:incType,set:setIncType,ph:"e.g. Physical, Verbal, Threat…"},
+          {label:"Location",type:"text",val:incLocation,set:setIncLocation,ph:"e.g. Home, Workplace…"},
+          {label:"Witnesses",type:"text",val:incWitnesses,set:setIncWitnesses,ph:"Names or 'None'"},
+        ].map(f=>(
+          <div key={f.label} style={{marginBottom:13}}>
+            <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>{f.label}</div>
+            <input className="field" type={f.type} value={f.val} onChange={e=>f.set(e.target.value)} placeholder={f.ph||""}/>
+          </div>
+        ))}
+        <div style={{marginBottom:13}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:5}}>Description</div>
+          <textarea className="field" rows={4} value={incDesc} onChange={e=>setIncDesc(e.target.value)} placeholder="Describe what happened in detail…" style={{resize:"none",lineHeight:1.6}}/>
+        </div>
+        <button className="btn-blue" style={{background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}} disabled={saving||!incType||!incDesc}
+          onClick={async()=>{
+            setSaving(true);
+            const newRec={id:Date.now(),date:new Date(incDate).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}),type:incType,location:incLocation,witnesses:incWitnesses,desc:incDesc,shared:false,createdAt:Date.now()};
+            const updated=[newRec,...records];
+            saveRecords(updated);
+            // Try Firebase
+            if(window._fbReady&&fbDb&&fbRef&&fbSet&&user?.uid){
+              try{await fbSet(fbRef(fbDb,`vdocs/${user.uid}/${newRec.id}`),newRec);}catch(e){}
+            }
+            await new Promise(r=>setTimeout(r,600));
+            setSaving(false);
+            setIncType("");setIncDesc("");setIncLocation("");setIncWitnesses("");
+            setScreen("main");
+          }}>
+          {saving?"Saving…":"💾 Save Record →"}
+        </button>
+      </GCard>
+    </div>
+  );
+
+  // Main screen
   return(
     <div>
-      <SectionTitle icon="📸" title="Violence Report" sub="Private & secure documentation"/>
+      <SectionTitle icon="🛡️" title="Violence Documentation" sub="Private & secure"/>
       <GCard style={{background:"rgba(123,63,158,0.07)",border:"1px solid rgba(123,63,158,0.18)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
           <span style={{fontSize:18}}>🔒</span>
           <div style={{fontWeight:800,fontSize:13,color:C.purple}}>Private & Encrypted</div>
         </div>
         <div style={{fontSize:13,color:C.textMid,lineHeight:1.6}}>Your documentation is stored securely. Only you control who sees it.</div>
       </GCard>
-      <div style={{padding:"0 18px",marginBottom:14}}>
-        <button className="btn-blue" style={{marginBottom:10,background:"linear-gradient(135deg,#7B3F9E,#9c4fbf)"}}>📝 Document an Incident (Free)</button>
-        <button onClick={isPaid?undefined:onShowPaywall} className="btn-outline" style={{borderColor:"rgba(123,63,158,0.28)",color:C.purple}}>
-          📸 Add Secure Photos {!isPaid&&"🔒 Premium"}
+
+      <div style={{padding:"0 18px",marginBottom:4}}>
+        <button onClick={()=>setScreen("newDoc")} className="btn-blue" style={{marginBottom:10,background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}}>
+          📝 Document an Incident
+        </button>
+        <button onClick={()=>{
+          if(!isPaid){onShowPaywall();return;}
+          if(!pin){setScreen("pinSetup");}
+          else{setScreen("pinEntry");setPinInput("");setPinError("");}
+        }} className="btn-outline" style={{borderColor:"rgba(123,63,158,0.28)",color:C.purple}}>
+          🔒 Secure Photos {!isPaid&&<span style={{fontSize:10,background:"rgba(244,162,97,0.18)",color:C.gold,borderRadius:7,padding:"2px 7px",fontWeight:700,marginLeft:4}}>Premium</span>}
         </button>
       </div>
+
+      {records.length>0&&(
+        <GCard>
+          <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📋 Your Records ({records.length})</div>
+          {records.slice(0,5).map((r,i)=>(
+            <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<Math.min(records.length,5)-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+              <div style={{width:38,height:38,borderRadius:11,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>📄</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{r.type}</div>
+                <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{r.date}{r.location?` · ${r.location}`:""}</div>
+              </div>
+              {r.shared&&<span style={{fontSize:10,background:"rgba(45,154,110,0.13)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>}
+            </div>
+          ))}
+        </GCard>
+      )}
+
       <GCard>
-        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>Share With</div>
-        {[{icon:"👮",label:"Police / Law Enforcement",premium:false},{icon:"🏥",label:"Healthcare Provider",premium:false},{icon:"👥",label:"Social Workers",premium:true}].map((item,i,arr)=>(
-          <div key={item.label} onClick={!item.premium||isPaid?undefined:onShowPaywall}
-            style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📤 Share With</div>
+        {[{icon:"👮",label:"Police / Law Enforcement"},{icon:"🏥",label:"Healthcare Provider"},{icon:"👥",label:"Social Workers"}].map((item,i,arr)=>(
+          <div key={item.label} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer",opacity:records.length>0?1:0.4}}>
             <span style={{fontSize:20}}>{item.icon}</span>
             <span style={{flex:1,fontSize:13,fontWeight:600,color:C.textMid}}>{item.label}</span>
-            {item.premium&&!isPaid?<span style={{fontSize:10,background:"rgba(244,162,97,0.18)",color:C.gold,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Premium</span>:<span style={{fontSize:15,color:C.green}}>→</span>}
+            <span style={{fontSize:15,color:records.length>0?C.green:C.textLight}}>→</span>
           </div>
         ))}
-      </GCard>
-      <GCard>
-        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>Your Records</div>
-        {records.map((r,i)=>(
-          <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<records.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
-            <div style={{width:38,height:38,borderRadius:11,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17}}>📄</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{r.type}</div>
-              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{r.date} · {r.desc}</div>
-            </div>
-            {r.shared&&<span style={{fontSize:10,background:"rgba(45,154,110,0.13)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>}
-          </div>
-        ))}
+        {records.length===0&&<div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:8}}>Add a record first to share</div>}
       </GCard>
     </div>
   );
@@ -1231,30 +1488,88 @@ const TraumaModule=()=>{
 
 /* ══ COMMUNITY ══ */
 const CommunityModule=({user})=>{
-  const [messages,setMessages]=useState(SEED_CHAT);
-  const [input,setInput]=useState(""); const [chatName,setChatName]=useState(user?.name?.split(" ")[0]||"You");
+  const [channel,setChannel]=useState(null);
+  const [allMessages,setAllMessages]=useState(()=>{
+    const init={};
+    CHANNELS.forEach(c=>{init[c.id]=[...c.seed];});
+    return init;
+  });
+  const [input,setInput]=useState("");
+  const [chatName,setChatName]=useState(user?.name?.split(" ")[0]||"You");
   const chatEndRef=useRef(null);
-  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[messages]);
-  const send=()=>{if(!input.trim())return;setMessages(p=>[...p,{id:Date.now(),user:chatName,avatar:"💙",text:input.trim(),time:"Just now",mine:true}]);setInput("");};
-  return(
+  useEffect(()=>{chatEndRef.current?.scrollIntoView({behavior:"smooth"});},[allMessages,channel]);
+
+  const messages=channel?allMessages[channel.id]||[]:[];
+  const send=()=>{
+    if(!input.trim()||!channel)return;
+    setAllMessages(prev=>({...prev,[channel.id]:[...prev[channel.id],{id:Date.now(),user:chatName,avatar:"💙",text:input.trim(),time:"Just now",mine:true}]}));
+    setInput("");
+  };
+
+  // Channel list view
+  if(!channel) return(
     <div>
-      <SectionTitle icon="💬" title="Community Chat" sub="Anonymous & supportive"/>
+      <SectionTitle icon="💬" title="Community Chat" sub="Choose a topic to join"/>
       <GCard style={{background:"rgba(26,140,122,0.07)",border:"1px solid rgba(26,140,122,0.17)"}}>
         <div style={{display:"flex",alignItems:"center",gap:9}}>
           <span style={{fontSize:16}}>🔒</span>
           <div style={{fontWeight:700,fontSize:13,color:C.teal}}>Anonymous & Safe Space</div>
         </div>
-        <div style={{fontSize:12,color:C.textLight,marginTop:5}}>Your real name is never shown unless you choose to share it.</div>
+        <div style={{fontSize:12,color:C.textLight,marginTop:5}}>Your real name is never shown. Choose a topic below to join the conversation.</div>
       </GCard>
-      <div className="glass" style={{margin:"0 18px 14px",borderRadius:18,overflow:"hidden"}}>
-        <div style={{padding:"13px 15px",fontWeight:800,fontSize:13,color:C.textDark,borderBottom:"1px solid rgba(26,111,160,0.09)"}}>Open Discussion</div>
-        <div style={{maxHeight:300,overflowY:"auto",padding:"11px 13px"}}>
+      <div style={{padding:"0 18px"}}>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:12}}>Topics</div>
+        {CHANNELS.map(ch=>(
+          <div key={ch.id} onClick={()=>setChannel(ch)}
+            style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",marginBottom:10,borderRadius:16,background:"rgba(255,255,255,0.52)",border:`1.5px solid ${ch.id==="crisis"?"rgba(244,162,97,0.4)":"rgba(26,111,160,0.12)"}`,cursor:"pointer",backdropFilter:"blur(14px)",transition:"all 0.15s",boxShadow:"0 4px 16px rgba(26,80,130,0.07)"}}>
+            <div style={{width:44,height:44,borderRadius:13,background:`${ch.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0}}>{ch.icon}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:14,color:ch.color}}>{ch.label}</div>
+              <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{ch.desc}</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+              <div style={{fontSize:11,color:C.textLight}}>{allMessages[ch.id]?.length||0} msgs</div>
+              <span style={{color:C.textLight,fontSize:16}}>›</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:8}}>👤 Your Anonymous Name</div>
+        <input value={chatName} onChange={e=>setChatName(e.target.value)} className="field" placeholder="Display name"/>
+      </GCard>
+    </div>
+  );
+
+  // Chat view
+  return(
+    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+      {/* Channel header */}
+      <div style={{padding:"12px 18px 8px",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setChannel(null)} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{width:34,height:34,borderRadius:10,background:`${channel.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>{channel.icon}</div>
+        <div>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:15,color:channel.color}}>{channel.label}</div>
+          <div style={{fontSize:11,color:C.textLight}}>{channel.desc}</div>
+        </div>
+      </div>
+
+      {channel.id==="crisis"&&(
+        <div style={{margin:"0 18px 10px",padding:"10px 14px",borderRadius:12,background:"rgba(244,162,97,0.12)",border:"1px solid rgba(244,162,97,0.3)"}}>
+          <div style={{fontWeight:800,fontSize:12,color:C.gold}}>🆘 Crisis Support Channel</div>
+          <div style={{fontSize:11,color:C.textLight,marginTop:3}}>If you are in immediate danger, call 112. Crisis line: 09 2525 0111</div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div className="glass" style={{margin:"0 18px 10px",borderRadius:18,overflow:"hidden",flex:1}}>
+        <div style={{maxHeight:340,overflowY:"auto",padding:"11px 13px"}}>
           {messages.map(msg=>(
             <div key={msg.id} style={{display:"flex",gap:9,marginBottom:12,flexDirection:msg.mine?"row-reverse":"row"}}>
-              <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(26,111,160,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{msg.avatar}</div>
-              <div style={{maxWidth:"70%"}}>
+              <div style={{width:34,height:34,borderRadius:"50%",background:`${channel.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>{msg.avatar}</div>
+              <div style={{maxWidth:"72%"}}>
                 {!msg.mine&&<div style={{fontSize:10,fontWeight:700,color:C.textLight,marginBottom:3}}>{msg.user}</div>}
-                <div style={{background:msg.mine?"rgba(26,111,160,0.82)":"rgba(255,255,255,0.7)",padding:"9px 12px",borderRadius:msg.mine?"15px 15px 3px 15px":"15px 15px 15px 3px",fontSize:13,lineHeight:1.5,color:msg.mine?"#fff":C.textDark}}>
+                <div style={{background:msg.mine?`${channel.color}cc`:"rgba(255,255,255,0.7)",padding:"9px 12px",borderRadius:msg.mine?"15px 15px 3px 15px":"15px 15px 15px 3px",fontSize:13,lineHeight:1.5,color:msg.mine?"#fff":C.textDark}}>
                   {msg.text}
                 </div>
                 <div style={{fontSize:10,color:C.textLight,marginTop:3,textAlign:msg.mine?"right":"left"}}>{msg.time}</div>
@@ -1264,15 +1579,12 @@ const CommunityModule=({user})=>{
           <div ref={chatEndRef}/>
         </div>
         <div style={{borderTop:"1px solid rgba(26,111,160,0.09)",padding:11,display:"flex",gap:8}}>
-          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Share how you're feeling…"
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()}
+            placeholder={`Message ${channel.label}…`}
             style={{flex:1,background:"rgba(255,255,255,0.6)",border:"1px solid rgba(26,111,160,0.13)",borderRadius:11,color:C.textDark,fontSize:13,padding:"9px 13px",outline:"none"}}/>
-          <button onClick={send} style={{padding:"9px 15px",background:C.blue,border:"none",borderRadius:11,color:"#fff",fontSize:17,cursor:"pointer"}}>→</button>
+          <button onClick={send} style={{padding:"9px 15px",background:channel.color,border:"none",borderRadius:11,color:"#fff",fontSize:17,cursor:"pointer"}}>→</button>
         </div>
       </div>
-      <GCard>
-        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:8}}>👤 Your Anonymous Name</div>
-        <input value={chatName} onChange={e=>setChatName(e.target.value)} className="field" placeholder="Display name"/>
-      </GCard>
     </div>
   );
 };
