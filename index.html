@@ -1377,6 +1377,81 @@ const ViolenceModule=({user,onShowPaywall})=>{
     </div>
   );
 
+  // View single record
+  if(screen==="viewDoc"&&activeDoc) return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>{setScreen("main");setActiveDoc(null);}} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>📄 Incident Record</div>
+      </div>
+      <GCard style={{marginTop:14}}>
+        {[
+          {label:"Date",value:activeDoc.date},
+          {label:"Type",value:activeDoc.type},
+          {label:"Location",value:activeDoc.location||"—"},
+          {label:"Witnesses",value:activeDoc.witnesses||"—"},
+        ].map((row,i,arr)=>(
+          <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"10px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+            <span style={{fontSize:12,color:C.textLight,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",flexShrink:0,marginRight:12}}>{row.label}</span>
+            <span style={{fontSize:13,fontWeight:700,color:C.textDark,textAlign:"right"}}>{row.value}</span>
+          </div>
+        ))}
+      </GCard>
+      <GCard>
+        <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Description</div>
+        <div style={{fontSize:14,color:C.textMid,lineHeight:1.7}}>{activeDoc.desc}</div>
+      </GCard>
+      <div style={{padding:"0 18px",display:"flex",gap:10,marginBottom:28}}>
+        <button onClick={()=>{
+          const updated=records.filter(r=>r.id!==activeDoc.id);
+          saveRecords(updated);
+          setActiveDoc(null);setScreen("main");
+        }} className="btn-outline" style={{flex:1,borderColor:"rgba(230,57,70,0.3)",color:C.red}}>🗑 Delete</button>
+        <button onClick={()=>{
+          const updated=records.map(r=>r.id===activeDoc.id?{...r,shared:true}:r);
+          saveRecords(updated);
+          setActiveDoc({...activeDoc,shared:true});
+        }} className="btn-blue" style={{flex:2,background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}}>
+          {activeDoc.shared?"✓ Shared":"📤 Share Record"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Share popup
+  if(screen==="share"&&activeDoc) return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("viewDoc")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>📤 Share Record</div>
+      </div>
+      <GCard style={{marginTop:14}}>
+        <div style={{fontSize:13,color:C.textMid,marginBottom:16,lineHeight:1.6}}>Choose who to share <strong>{activeDoc.type}</strong> ({activeDoc.date}) with:</div>
+        {[
+          {icon:"👮",label:"Police / Law Enforcement",desc:"Share as evidence report"},
+          {icon:"🏥",label:"Healthcare Provider",desc:"Share with your doctor or nurse"},
+          {icon:"👥",label:"Social Workers",desc:"Share with social services"},
+          {icon:"👫",label:"Trusted Friend",desc:"Share with someone you trust"},
+        ].map((item,i,arr)=>(
+          <div key={item.label} onClick={()=>{
+            const updated=records.map(r=>r.id===activeDoc.id?{...r,shared:true,sharedWith:[...(r.sharedWith||[]),item.label]}:r);
+            saveRecords(updated);
+            setActiveDoc({...activeDoc,shared:true});
+            alert(`Record prepared for sharing with ${item.label}.\n\nIn the full version this will generate a secure PDF report.`);
+          }}
+            style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+            <div style={{width:42,height:42,borderRadius:12,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{item.icon}</div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{item.label}</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{item.desc}</div>
+            </div>
+            <span style={{fontSize:15,color:C.purple}}>→</span>
+          </div>
+        ))}
+      </GCard>
+    </div>
+  );
+
   // Main screen
   return(
     <div>
@@ -1405,14 +1480,18 @@ const ViolenceModule=({user,onShowPaywall})=>{
       {records.length>0&&(
         <GCard>
           <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📋 Your Records ({records.length})</div>
-          {records.slice(0,5).map((r,i)=>(
-            <div key={r.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<Math.min(records.length,5)-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+          {records.slice(0,10).map((r,i)=>(
+            <div key={r.id} onClick={()=>{setActiveDoc(r);setScreen("viewDoc");}}
+              style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<Math.min(records.length,10)-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
               <div style={{width:38,height:38,borderRadius:11,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>📄</div>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{r.type}</div>
                 <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{r.date}{r.location?` · ${r.location}`:""}</div>
               </div>
-              {r.shared&&<span style={{fontSize:10,background:"rgba(45,154,110,0.13)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>}
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                {r.shared&&<span style={{fontSize:10,background:"rgba(45,154,110,0.13)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>}
+                <span style={{color:C.textLight,fontSize:16}}>›</span>
+              </div>
             </div>
           ))}
         </GCard>
@@ -1420,11 +1499,21 @@ const ViolenceModule=({user,onShowPaywall})=>{
 
       <GCard>
         <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📤 Share With</div>
-        {[{icon:"👮",label:"Police / Law Enforcement"},{icon:"🏥",label:"Healthcare Provider"},{icon:"👥",label:"Social Workers"}].map((item,i,arr)=>(
-          <div key={item.label} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer",opacity:records.length>0?1:0.4}}>
+        {[
+          {icon:"👮",label:"Police / Law Enforcement"},
+          {icon:"🏥",label:"Healthcare Provider"},
+          {icon:"👥",label:"Social Workers"},
+          {icon:"👫",label:"Trusted Friend"},
+        ].map((item,i,arr)=>(
+          <div key={item.label} onClick={()=>{
+            if(records.length===0) return;
+            if(records.length===1){setActiveDoc(records[0]);setScreen("share");}
+            else{setActiveDoc(records[0]);setScreen("share");}
+          }}
+            style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:records.length>0?"pointer":"default",opacity:records.length>0?1:0.4}}>
             <span style={{fontSize:20}}>{item.icon}</span>
             <span style={{flex:1,fontSize:13,fontWeight:600,color:C.textMid}}>{item.label}</span>
-            <span style={{fontSize:15,color:records.length>0?C.green:C.textLight}}>→</span>
+            <span style={{fontSize:15,color:records.length>0?C.purple:C.textLight}}>→</span>
           </div>
         ))}
         {records.length===0&&<div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:8}}>Add a record first to share</div>}
@@ -1434,9 +1523,28 @@ const ViolenceModule=({user,onShowPaywall})=>{
 };
 
 /* ══ TRAUMA MODULE ══ */
-const TraumaModule=()=>{
-  const [active,setActive]=useState(null);
-  if(active){
+const TraumaModule=({user})=>{
+  const [active,setActive]=useState(null); // exercise id or "anchor"
+  const anchorKey=`p2c_anchor_${user?.uid||user?.email||"local"}`;
+  const [anchor,setAnchor]=useState(()=>{try{return JSON.parse(localStorage.getItem(anchorKey)||"null");}catch(e){return null;}});
+  const [songTitle,setSongTitle]=useState(anchor?.songTitle||"");
+  const [songArtist,setSongArtist]=useState(anchor?.songArtist||"");
+  const [songUrl,setSongUrl]=useState(anchor?.songUrl||"");
+  const [calmImage,setCalmImage]=useState(anchor?.calmImage||null);
+  const [calmNote,setCalmNote]=useState(anchor?.calmNote||"");
+  const [saved,setSaved]=useState(false);
+  const imgRef=useRef(null);
+
+  const saveAnchor=()=>{
+    const data={songTitle,songArtist,songUrl,calmImage,calmNote,updatedAt:Date.now()};
+    localStorage.setItem(anchorKey,JSON.stringify(data));
+    setAnchor(data);
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2000);
+  };
+
+  // Exercise view
+  if(active&&active!=="anchor"){
     const ex=EXERCISES.find(e=>e.id===active);
     return(
       <div style={{animation:"scaleIn 0.3s ease both"}}>
@@ -1457,13 +1565,112 @@ const TraumaModule=()=>{
       </div>
     );
   }
+
+  // Anchor view
+  if(active==="anchor") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setActive(null)} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.teal}}>⚓ My Anchor</div>
+      </div>
+
+      {/* If anchor is set — show it beautifully */}
+      {anchor&&(anchor.calmImage||anchor.songTitle)&&(
+        <GCard style={{background:"linear-gradient(135deg,rgba(26,140,122,0.08),rgba(26,111,160,0.06))",border:"1px solid rgba(26,140,122,0.2)",marginTop:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.teal,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:12}}>Your Anchor 💙</div>
+          {anchor.calmImage&&(
+            <div style={{borderRadius:16,overflow:"hidden",marginBottom:12}}>
+              <img src={anchor.calmImage} alt="Calm" style={{width:"100%",maxHeight:180,objectFit:"cover",display:"block"}}/>
+            </div>
+          )}
+          {anchor.calmNote&&<div style={{fontSize:14,fontStyle:"italic",color:C.textMid,marginBottom:12,lineHeight:1.6}}>"{anchor.calmNote}"</div>}
+          {anchor.songTitle&&(
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:13,background:"rgba(26,111,160,0.08)"}}>
+              <span style={{fontSize:24}}>🎵</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:800,fontSize:14,color:C.textDark}}>{anchor.songTitle}</div>
+                {anchor.songArtist&&<div style={{fontSize:12,color:C.textLight,marginTop:2}}>{anchor.songArtist}</div>}
+              </div>
+              {anchor.songUrl&&(
+                <a href={anchor.songUrl} target="_blank" rel="noreferrer"
+                  style={{padding:"7px 13px",borderRadius:20,background:C.teal,color:"#fff",fontSize:12,fontWeight:700,textDecoration:"none"}}>
+                  ▶ Play
+                </a>
+              )}
+            </div>
+          )}
+        </GCard>
+      )}
+
+      {/* Edit form */}
+      <GCard style={{marginTop:anchor?8:14}}>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:4}}>🎵 Power Song</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:14}}>The song that makes you feel strong</div>
+        <input className="field" placeholder="Song title" value={songTitle} onChange={e=>setSongTitle(e.target.value)} style={{marginBottom:10}}/>
+        <input className="field" placeholder="Artist name" value={songArtist} onChange={e=>setSongArtist(e.target.value)} style={{marginBottom:10}}/>
+        <input className="field" placeholder="Spotify / YouTube link (optional)" value={songUrl} onChange={e=>setSongUrl(e.target.value)}/>
+      </GCard>
+
+      <GCard>
+        <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:4}}>🖼️ Calm Down Image</div>
+        <div style={{fontSize:12,color:C.textLight,marginBottom:14}}>A photo that brings you peace — nature, loved ones, a memory</div>
+        <input ref={imgRef} type="file" accept="image/*" style={{display:"none"}}
+          onChange={e=>{
+            const file=e.target.files?.[0];
+            if(!file)return;
+            const reader=new FileReader();
+            reader.onload=ev=>setCalmImage(ev.target.result);
+            reader.readAsDataURL(file);
+          }}
+        />
+        {calmImage?(
+          <div style={{position:"relative",borderRadius:14,overflow:"hidden",marginBottom:10}}>
+            <img src={calmImage} alt="Calm" style={{width:"100%",maxHeight:160,objectFit:"cover",display:"block"}}/>
+            <button onClick={()=>setCalmImage(null)}
+              style={{position:"absolute",top:8,right:8,background:"rgba(230,57,70,0.85)",border:"none",borderRadius:"50%",width:26,height:26,color:"#fff",fontSize:14,cursor:"pointer"}}>×</button>
+          </div>
+        ):(
+          <button onClick={()=>imgRef.current?.click()}
+            style={{width:"100%",padding:"13px",borderRadius:13,border:`2px dashed rgba(26,140,122,0.4)`,background:"rgba(26,140,122,0.05)",color:C.teal,fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:10}}>
+            📷 Choose Image
+          </button>
+        )}
+        <textarea className="field" rows={2} placeholder="A word or phrase this image gives you… (optional)" value={calmNote} onChange={e=>setCalmNote(e.target.value)} style={{resize:"none"}}/>
+      </GCard>
+
+      <div style={{margin:"0 18px 32px"}}>
+        <button onClick={saveAnchor} className="btn-blue"
+          style={{background:`linear-gradient(135deg,${C.teal},#2db89a)`}}>
+          {saved?"✅ Saved!":"⚓ Save My Anchor"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // Main view
   return(
     <div>
       <SectionTitle icon="🧠" title="Trauma Recovery" sub="Self-guided exercises & empowerment"/>
+
+      {/* Anchor card */}
+      <div style={{padding:"0 18px",marginBottom:4}}>
+        <div onClick={()=>setActive("anchor")}
+          style={{borderRadius:20,padding:18,background:"linear-gradient(135deg,rgba(26,140,122,0.12),rgba(26,111,160,0.08))",border:"1.5px solid rgba(26,140,122,0.25)",cursor:"pointer",display:"flex",alignItems:"center",gap:14,marginBottom:4}}>
+          <div style={{width:50,height:50,borderRadius:15,background:"rgba(26,140,122,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0}}>⚓</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:15,color:C.teal}}>My Anchor</div>
+            <div style={{fontSize:12,color:C.textLight,marginTop:3}}>
+              {anchor?.songTitle?`🎵 ${anchor.songTitle}${anchor.songArtist?` · ${anchor.songArtist}`:""}`:anchor?.calmImage?"Image saved 🖼️":"Your power song & calm image"}
+            </div>
+          </div>
+          <span style={{color:C.teal,fontSize:18}}>›</span>
+        </div>
+      </div>
+
       <GCard style={{background:"rgba(26,111,160,0.06)",border:"1px solid rgba(26,111,160,0.17)"}}>
         <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:7}}>
           <span style={{fontSize:18}}>💙</span>
-          <div style={{fontWeight:800,fontSize:13,color:C.blue}}>Self-Guided Exercises + Empowerment</div>
+          <div style={{fontWeight:800,fontSize:13,color:C.blue}}>Self-Guided Exercises</div>
         </div>
         <div style={{fontSize:13,color:C.textMid,lineHeight:1.6}}>Take your time with each exercise. There's no rush on the healing journey.</div>
       </GCard>
@@ -1479,7 +1686,7 @@ const TraumaModule=()=>{
             </div>
           ))}
         </div>
-        <button className="btn-blue">▶ Begin Recommended Exercise</button>
+        <button className="btn-blue" onClick={()=>setActive(EXERCISES[0].id)}>▶ Begin Recommended Exercise</button>
       </div>
       <div style={{height:20}}/>
     </div>
@@ -1634,6 +1841,137 @@ const TrendsTab=({history})=>{
 const ProfileTab=({user,onLogout,onShowPaywall})=>{
   const isPaid=["normal_monthly","normal_annual","premium_monthly","premium_annual"].includes(user?.plan);
   const daysLeft=Math.max(0,5-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  const [screen,setScreen]=useState("main"); // main | mydata | deleteConfirm
+  const [deleting,setDeleting]=useState(false);
+  const [deleted,setDeleted]=useState(false);
+
+  // Count stored data
+  const storageKey=`p2c_vdocs_${user?.uid||user?.email||"local"}`;
+  const vdocs=JSON.parse(localStorage.getItem(storageKey)||"[]");
+  const hasPin=!!localStorage.getItem(`p2c_vpin_${user?.uid||user?.email||"local"}`);
+
+  const deleteAllData=async()=>{
+    setDeleting(true);
+    // Clear localStorage
+    const keysToDelete=Object.keys(localStorage).filter(k=>k.includes(user?.uid||user?.email||"local")||k.includes("p2c_"));
+    keysToDelete.forEach(k=>localStorage.removeItem(k));
+    sessionStorage.removeItem("p2c_session");
+    // Delete from Firebase
+    if(window._fbReady&&fbDb&&fbRef&&user?.uid){
+      try{
+        const {remove}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js");
+        await remove(fbRef(fbDb,`users/${user.uid}`));
+        await remove(fbRef(fbDb,`vdocs/${user.uid}`));
+      }catch(e){}
+      try{
+        if(fbAuth?.currentUser){
+          const {deleteUser}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js");
+          await deleteUser(fbAuth.currentUser);
+        }
+      }catch(e){}
+    }
+    await new Promise(r=>setTimeout(r,1000));
+    setDeleting(false);
+    setDeleted(true);
+    setTimeout(()=>onLogout(),1500);
+  };
+
+  if(deleted) return(
+    <div style={{minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:14,padding:"0 24px"}}>
+      <div style={{fontSize:48}}>✅</div>
+      <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:20,color:C.green}}>Data Deleted</div>
+      <div style={{fontSize:13,color:C.textLight,textAlign:"center"}}>All your data has been permanently removed. Signing you out…</div>
+    </div>
+  );
+
+  if(screen==="deleteConfirm") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("mydata")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.red}}>⚠️ Delete All Data</div>
+      </div>
+      <GCard style={{marginTop:14,background:"rgba(230,57,70,0.06)",border:"1px solid rgba(230,57,70,0.2)"}}>
+        <div style={{fontSize:14,fontWeight:800,color:C.red,marginBottom:10}}>This cannot be undone!</div>
+        <div style={{fontSize:13,color:C.textMid,lineHeight:1.7}}>
+          This will permanently delete:<br/>
+          • Your account and profile<br/>
+          • All pain check-in history<br/>
+          • All incident records<br/>
+          • All secure photos<br/>
+          • All settings and preferences
+        </div>
+      </GCard>
+      <div style={{padding:"0 18px",display:"flex",gap:10,marginBottom:28}}>
+        <button onClick={()=>setScreen("mydata")} className="btn-outline" style={{flex:1}}>Cancel</button>
+        <button onClick={deleteAllData} disabled={deleting}
+          style={{flex:2,padding:"16px",borderRadius:50,border:"none",background:"linear-gradient(135deg,#e63946,#ff5868)",color:"#fff",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          {deleting?"Deleting…":"🗑 Delete Everything"}
+        </button>
+      </div>
+    </div>
+  );
+
+  if(screen==="mydata") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("main")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.textDark}}>🔐 My Data (GDPR)</div>
+      </div>
+
+      <GCard style={{marginTop:14,background:"rgba(26,111,160,0.05)",border:"1px solid rgba(26,111,160,0.15)"}}>
+        <div style={{fontWeight:800,fontSize:13,color:C.blue,marginBottom:8}}>📋 Data We Store About You</div>
+        {[
+          {label:"Account",value:`Name, email, date of birth, gender`,icon:"👤"},
+          {label:"Health Data",value:`Pain check-ins, mood, body map entries`,icon:"🩺"},
+          {label:"Incident Records",value:`${vdocs.length} record${vdocs.length!==1?"s":""} stored`,icon:"📄"},
+          {label:"Secure PIN",value:hasPin?"Set (encrypted locally)":"Not set",icon:"🔒"},
+          {label:"Subscription",value:isPaid?"Active plan stored":"Trial",icon:"💳"},
+          {label:"Storage Location",value:"Firebase (EU servers) + device",icon:"☁️"},
+        ].map((row,i,arr)=>(
+          <div key={row.label} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+            <span style={{fontSize:16,flexShrink:0}}>{row.icon}</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700,fontSize:12,color:C.textDark}}>{row.label}</div>
+              <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{row.value}</div>
+            </div>
+          </div>
+        ))}
+      </GCard>
+
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>⚖️ Your GDPR Rights</div>
+        {[
+          {icon:"👁",right:"Right to Access",desc:"You can see all data above"},
+          {icon:"✏️",right:"Right to Rectification",desc:"Edit your profile anytime"},
+          {icon:"📦",right:"Right to Portability",desc:"Export coming in next update"},
+          {icon:"🗑",right:"Right to Erasure",desc:"Delete all your data below"},
+        ].map((r,i,arr)=>(
+          <div key={r.right} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+            <span style={{fontSize:18,flexShrink:0}}>{r.icon}</span>
+            <div>
+              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{r.right}</div>
+              <div style={{fontSize:12,color:C.textLight,marginTop:2}}>{r.desc}</div>
+            </div>
+          </div>
+        ))}
+      </GCard>
+
+      <GCard style={{background:"rgba(26,111,160,0.04)"}}>
+        <div style={{fontSize:12,color:C.textLight,lineHeight:1.7,marginBottom:12}}>
+          Pain2Care is GDPR compliant. Your data is never sold to third parties. Health data is processed under Article 9(2)(a) — explicit consent.
+        </div>
+        <div style={{fontSize:11,color:C.textLight}}>Data Controller: Tech4Pioneers · privacy@pain2care.app</div>
+      </GCard>
+
+      <div style={{margin:"0 18px 32px"}}>
+        <button onClick={()=>setScreen("deleteConfirm")}
+          style={{width:"100%",padding:"14px",borderRadius:50,border:"2px solid rgba(230,57,70,0.4)",background:"rgba(230,57,70,0.06)",color:C.red,fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          🗑 Delete All My Data
+        </button>
+      </div>
+    </div>
+  );
+
   return(
     <div>
       <SectionTitle icon="👤" title="Profile" sub="Your account & settings"/>
@@ -1650,11 +1988,18 @@ const ProfileTab=({user,onLogout,onShowPaywall})=>{
       {!isPaid&&<div style={{margin:"0 18px 14px"}}><button className="btn-blue" onClick={onShowPaywall}>⭐ Upgrade to Premium</button></div>}
       <GCard>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>Account</div>
-        {[{icon:"✏️",label:"Edit Profile"},{icon:"🔔",label:"Notifications"},{icon:"🌍",label:"Language"},{icon:"🔒",label:"Privacy Settings"},{icon:"❓",label:"Help & Support"}].map((item,i,arr)=>(
-          <div key={item.label} style={{display:"flex",alignItems:"center",gap:11,padding:"12px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
+        {[
+          {icon:"✏️",label:"Edit Profile",action:null},
+          {icon:"🔔",label:"Notifications",action:null},
+          {icon:"🌍",label:"Language",action:null},
+          {icon:"🔐",label:"My Data & Privacy (GDPR)",action:()=>setScreen("mydata"),highlight:true},
+          {icon:"❓",label:"Help & Support",action:null},
+        ].map((item,i,arr)=>(
+          <div key={item.label} onClick={item.action||undefined}
+            style={{display:"flex",alignItems:"center",gap:11,padding:"12px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:item.action?"pointer":"default"}}>
             <span style={{fontSize:17}}>{item.icon}</span>
-            <span style={{flex:1,fontSize:13,fontWeight:600,color:C.textMid}}>{item.label}</span>
-            <span style={{color:C.textLight,fontSize:15}}>›</span>
+            <span style={{flex:1,fontSize:13,fontWeight:600,color:item.highlight?C.blue:C.textMid}}>{item.label}</span>
+            <span style={{color:item.action?C.blue:C.textLight,fontSize:15}}>›</span>
           </div>
         ))}
       </GCard>
