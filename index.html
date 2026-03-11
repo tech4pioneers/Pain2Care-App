@@ -438,15 +438,15 @@ const SectionTitle=({icon,title,sub,onBack})=>(
   </div>
 );
 const BottomNav=({tab,setTab})=>{
-  const items=[{id:"home",icon:"🏠",label:"Home"},{id:"pain",icon:"🩺",label:"Pain"},{id:"trauma",icon:"🧠",label:"Recovery"},{id:"community",icon:"💬",label:"Community"},{id:"profile",icon:"👤",label:"Profile"}];
+  const items=[{id:"home",icon:"🏠",label:"Home"},{id:"pain",icon:"🩺",label:"Pain"},{id:"violence",icon:"🛡️",label:"Safety"},{id:"trauma",icon:"🧠",label:"Recovery"},{id:"community",icon:"💬",label:"Chat"},{id:"profile",icon:"👤",label:"Profile"}];
   return(
     <div className="glass" style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:430,display:"flex",justifyContent:"space-around",padding:"8px 0 max(10px,env(safe-area-inset-bottom))",zIndex:100,borderRadius:"20px 20px 0 0",borderBottom:"none",boxShadow:"0 -4px 20px rgba(26,80,130,0.1)"}}>
       {items.map(t=>(
         <button key={t.id} onClick={()=>setTab(t.id)}
-          style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",color:tab===t.id?C.blue:C.textLight,fontSize:9,fontWeight:tab===t.id?800:600,textTransform:"uppercase",letterSpacing:"0.04em",border:"none",background:"transparent",padding:"4px 8px",transition:"color 0.2s",minWidth:0}}>
-          <span style={{fontSize:tab===t.id?22:19,transition:"font-size 0.2s"}}>{t.icon}</span>
+          style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,cursor:"pointer",color:tab===t.id?(t.id==="violence"?C.purple:C.blue):C.textLight,fontSize:8,fontWeight:tab===t.id?800:600,textTransform:"uppercase",letterSpacing:"0.04em",border:"none",background:"transparent",padding:"4px 5px",transition:"color 0.2s",minWidth:0}}>
+          <span style={{fontSize:tab===t.id?21:18,transition:"font-size 0.2s"}}>{t.icon}</span>
           {t.label}
-          {tab===t.id&&<div style={{width:4,height:4,borderRadius:"50%",background:C.blue}}/>}
+          {tab===t.id&&<div style={{width:4,height:4,borderRadius:"50%",background:t.id==="violence"?C.purple:C.blue}}/>}
         </button>
       ))}
     </div>
@@ -989,6 +989,16 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
             </div>
           ))}
         </div>
+        {history.length>0&&(
+          <div onClick={()=>onModuleSelect("trends")} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",borderRadius:16,background:"rgba(26,111,160,0.07)",border:"1px solid rgba(26,111,160,0.15)",cursor:"pointer",marginBottom:4}}>
+            <span style={{fontSize:26}}>📈</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:13,color:C.blue}}>Pain History & Trends</div>
+              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{history.length} check-in{history.length!==1?"s":""} · tap to view your journey</div>
+            </div>
+            <span style={{color:C.blue,fontSize:16}}>›</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -996,6 +1006,7 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
 
 /* ══ PAIN MODULE ══ */
 const PainModule=({user,history,setHistory,onShowPaywall,onBack})=>{
+  const [painTab,setPainTab]=useState("track"); // track | trends
   const [painLevel,setPainLevel]=useState(5);
   const [areaSymptoms,setAreaSymptoms]=useState({}); // {areaId: {symptoms:[{type}], intensity}}
   const [mood,setMood]=useState(null);
@@ -1089,6 +1100,75 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack})=>{
     <div>
       {popup&&<AreaPopup area={popup} current={areaSymptoms[popup.id]} onSave={handleAreaSave} onClose={()=>setPopup(null)}/>}
       <SectionTitle icon="🩺" title="Pain Module" sub="Track & visualise your pain" onBack={onBack}/>
+
+      {/* Tab bar */}
+      <div style={{display:"flex",margin:"6px 18px 10px",borderRadius:14,background:"rgba(26,111,160,0.08)",padding:3}}>
+        {[{id:"track",label:"🩺 Track",},{id:"trends",label:"📈 History"}].map(t=>(
+          <button key={t.id} onClick={()=>setPainTab(t.id)}
+            style={{flex:1,padding:"9px 0",borderRadius:11,border:"none",cursor:"pointer",fontFamily:"'Nunito',sans-serif",fontWeight:800,fontSize:13,transition:"all 0.2s",
+              background:painTab===t.id?"rgba(255,255,255,0.85)":"transparent",
+              color:painTab===t.id?C.blue:C.textLight,
+              boxShadow:painTab===t.id?"0 2px 8px rgba(26,80,130,0.12)":"none"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {painTab==="trends"&&(
+        <div style={{animation:"fadeIn 0.3s ease both"}}>
+          {history.length===0?(
+            <GCard style={{textAlign:"center",padding:32}}>
+              <div style={{fontSize:40,marginBottom:12}}>📊</div>
+              <div style={{fontWeight:800,fontSize:15,color:C.textDark,marginBottom:8}}>No data yet</div>
+              <div style={{fontSize:13,color:C.textLight}}>Complete your first check-in to see trends.</div>
+              <button onClick={()=>setPainTab("track")} className="btn-blue" style={{marginTop:16}}>Start Check-In →</button>
+            </GCard>
+          ):(
+            <>
+              <div style={{display:"flex",gap:10,padding:"0 18px 4px",overflowX:"auto"}}>
+                {[
+                  {label:"Avg Pain",value:(history.reduce((a,b)=>a+b.painLevel,0)/history.length).toFixed(1),color:C.red},
+                  {label:"Avg Score",value:(history.reduce((a,b)=>a+b.score,0)/history.length).toFixed(0),color:C.blue},
+                  {label:"Check-Ins",value:history.length,color:C.green},
+                  {label:"Trend",value:(()=>{const t=history.length>=2?history[history.length-1].painLevel-history[history.length-2].painLevel:0;return t>0?`+${t}↑`:t<0?`${t}↓`:"→";})(),color:(()=>{const t=history.length>=2?history[history.length-1].painLevel-history[history.length-2].painLevel:0;return t>0?C.red:t<0?C.green:C.textLight;})()},
+                ].map(s=>(
+                  <div key={s.label} className="glass" style={{borderRadius:13,padding:"11px 13px",flexShrink:0}}>
+                    <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{s.label}</div>
+                    <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:20,color:s.color}}>{s.value}</div>
+                  </div>
+                ))}
+              </div>
+              <GCard style={{marginTop:8}}>
+                <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📉 Pain Over Time</div>
+                <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Lower is better</div>
+                <MiniChart data={history.slice(-7).map(h=>({v:h.painLevel,day:h.date}))} color={C.red} maxVal={10} height={90} filled={true}/>
+              </GCard>
+              <GCard>
+                <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📈 Recovery Score</div>
+                <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Higher is better · max 30</div>
+                <MiniChart data={history.slice(-7).map(h=>({v:h.score,day:h.date}))} color={C.blue} maxVal={30} height={90} filled={false}/>
+              </GCard>
+              <GCard>
+                <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>🗂 Check-In Log</div>
+                {[...history].reverse().map((entry,i)=>{
+                  const sc=entry.score>=20?C.green:entry.score>=12?C.gold:C.red;
+                  return(
+                    <div key={entry.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 0",borderBottom:i<history.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
+                      <div>
+                        <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{entry.fullDate}</div>
+                        <div style={{fontSize:11,color:C.textLight,marginTop:2}}>Pain {entry.painLevel}/10 · {MOODS.find(m=>m.value===entry.mood)?.emoji||"—"} · {entry.checkedCount} checks</div>
+                      </div>
+                      <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:24,color:sc}}>{entry.score}</div>
+                    </div>
+                  );
+                })}
+              </GCard>
+            </>
+          )}
+        </div>
+      )}
+
+      {painTab==="track"&&<div style={{animation:"fadeIn 0.3s ease both"}}>
       <GCard>
         <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:3}}>⚡ Pain Level</div>
         <div style={{fontSize:12,color:C.textLight,marginBottom:13}}>How intense is your overall pain right now?</div>
@@ -1155,7 +1235,7 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack})=>{
       <div style={{margin:"0 18px 32px"}}>
         <button className="btn-red" onClick={handleSubmit}>Log Pain Check-In →</button>
       </div>
-    </div>
+    </div>}
   );
 };
 
@@ -2380,7 +2460,7 @@ const MainApp=({user:initialUser,onLogout,onShowPaywall})=>{
       default: return <HomeTab user={user} onModuleSelect={setTab} onShowPaywall={onShowPaywall} history={history}/>;
     }
   };
-  const navTab=["home","pain","trauma","community","profile"].includes(tab)?tab:"home";
+  const navTab=["home","pain","violence","trauma","community","profile"].includes(tab)?tab:"home";
   return(
     <AppShell tab={navTab} setTab={handleSetTab} user={user} onLogout={onLogout}>
       {renderContent()}
