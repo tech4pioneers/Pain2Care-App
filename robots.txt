@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /pain2care.html
+
+Sitemap: https://www.pain2care.com/sitemap.xml
