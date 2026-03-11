@@ -1401,56 +1401,109 @@ const ViolenceModule=({user,onShowPaywall})=>{
         <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Description</div>
         <div style={{fontSize:14,color:C.textMid,lineHeight:1.7}}>{activeDoc.desc}</div>
       </GCard>
+
+      {/* Share history */}
+      {activeDoc.shareLog&&activeDoc.shareLog.length>0&&(
+        <GCard style={{background:"rgba(45,154,110,0.05)",border:"1px solid rgba(45,154,110,0.18)"}}>
+          <div style={{fontWeight:800,fontSize:13,color:C.green,marginBottom:12}}>📤 Sharing History</div>
+          {activeDoc.shareLog.map((log,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:i<activeDoc.shareLog.length-1?"1px solid rgba(26,111,160,0.08)":"none"}}>
+              <span style={{fontSize:18}}>{log.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{log.recipient}</div>
+                <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{log.date}</div>
+              </div>
+              <span style={{fontSize:10,background:"rgba(45,154,110,0.12)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>Shared</span>
+            </div>
+          ))}
+        </GCard>
+      )}
+
       <div style={{padding:"0 18px",display:"flex",gap:10,marginBottom:28}}>
         <button onClick={()=>{
           const updated=records.filter(r=>r.id!==activeDoc.id);
           saveRecords(updated);
           setActiveDoc(null);setScreen("main");
         }} className="btn-outline" style={{flex:1,borderColor:"rgba(230,57,70,0.3)",color:C.red}}>🗑 Delete</button>
-        <button onClick={()=>{
-          const updated=records.map(r=>r.id===activeDoc.id?{...r,shared:true}:r);
-          saveRecords(updated);
-          setActiveDoc({...activeDoc,shared:true});
-        }} className="btn-blue" style={{flex:2,background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}}>
-          {activeDoc.shared?"✓ Shared":"📤 Share Record"}
+        <button onClick={()=>setScreen("share")}
+          className="btn-blue" style={{flex:2,background:`linear-gradient(135deg,${C.purple},#9c4fbf)`}}>
+          📤 Share Record
         </button>
       </div>
     </div>
   );
 
-  // Share popup
+  // Share screen
   if(screen==="share"&&activeDoc) return(
     <div style={{animation:"fadeIn 0.3s ease both"}}>
       <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
         <button onClick={()=>setScreen("viewDoc")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
         <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.purple}}>📤 Share Record</div>
       </div>
-      <GCard style={{marginTop:14}}>
-        <div style={{fontSize:13,color:C.textMid,marginBottom:16,lineHeight:1.6}}>Choose who to share <strong>{activeDoc.type}</strong> ({activeDoc.date}) with:</div>
+      <GCard style={{marginTop:14,background:"rgba(123,63,158,0.05)",border:"1px solid rgba(123,63,158,0.15)"}}>
+        <div style={{fontSize:13,color:C.textMid,marginBottom:4}}>Sharing: <strong>{activeDoc.type}</strong></div>
+        <div style={{fontSize:12,color:C.textLight}}>{activeDoc.date}{activeDoc.location?` · ${activeDoc.location}`:""}</div>
+      </GCard>
+      <GCard>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:14}}>Who do you want to share with?</div>
         {[
-          {icon:"👮",label:"Police / Law Enforcement",desc:"Share as evidence report"},
+          {icon:"👮",label:"Police / Law Enforcement",desc:"Share as official evidence report"},
           {icon:"🏥",label:"Healthcare Provider",desc:"Share with your doctor or nurse"},
           {icon:"👥",label:"Social Workers",desc:"Share with social services"},
           {icon:"👫",label:"Trusted Friend",desc:"Share with someone you trust"},
-        ].map((item,i,arr)=>(
-          <div key={item.label} onClick={()=>{
-            const updated=records.map(r=>r.id===activeDoc.id?{...r,shared:true,sharedWith:[...(r.sharedWith||[]),item.label]}:r);
-            saveRecords(updated);
-            setActiveDoc({...activeDoc,shared:true});
-            alert(`Record prepared for sharing with ${item.label}.\n\nIn the full version this will generate a secure PDF report.`);
-          }}
-            style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer"}}>
-            <div style={{width:42,height:42,borderRadius:12,background:"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{item.icon}</div>
-            <div style={{flex:1}}>
-              <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{item.label}</div>
-              <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{item.desc}</div>
+        ].map((item,i,arr)=>{
+          const alreadyShared=activeDoc.shareLog?.some(l=>l.recipient===item.label);
+          return(
+            <div key={item.label} onClick={()=>{
+              const now=new Date();
+              const dateStr=now.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",hour:"2-digit",minute:"2-digit"});
+              const newLog={recipient:item.label,icon:item.icon,date:dateStr,ts:Date.now()};
+              const updatedDoc={
+                ...activeDoc,
+                shared:true,
+                shareLog:[...(activeDoc.shareLog||[]),newLog]
+              };
+              const updatedRecords=records.map(r=>r.id===activeDoc.id?updatedDoc:r);
+              saveRecords(updatedRecords);
+              setActiveDoc(updatedDoc);
+              setScreen("shareConfirm");
+            }}
+              style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:i<arr.length-1?"1px solid rgba(26,111,160,0.09)":"none",cursor:"pointer",opacity:1}}>
+              <div style={{width:44,height:44,borderRadius:13,background:alreadyShared?"rgba(45,154,110,0.12)":"rgba(123,63,158,0.1)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>{item.icon}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{item.label}</div>
+                <div style={{fontSize:11,color:C.textLight,marginTop:2}}>{alreadyShared?"Already shared — share again?":item.desc}</div>
+              </div>
+              {alreadyShared
+                ?<span style={{fontSize:10,background:"rgba(45,154,110,0.12)",color:C.green,borderRadius:7,padding:"2px 8px",fontWeight:700}}>✓ Shared</span>
+                :<span style={{fontSize:15,color:C.purple}}>→</span>}
             </div>
-            <span style={{fontSize:15,color:C.purple}}>→</span>
-          </div>
-        ))}
+          );
+        })}
       </GCard>
     </div>
   );
+
+  // Share confirmation
+  if(screen==="shareConfirm"&&activeDoc){
+    const lastShare=activeDoc.shareLog?.[activeDoc.shareLog.length-1];
+    return(
+      <div style={{animation:"scaleIn 0.3s ease both",minHeight:"60vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"0 24px",gap:16}}>
+        <div style={{fontSize:56}}>✅</div>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:C.green,textAlign:"center"}}>Record Shared!</div>
+        <div style={{fontSize:14,color:C.textMid,textAlign:"center",lineHeight:1.7}}>
+          <strong>{activeDoc.type}</strong> has been prepared for sharing with<br/>
+          <strong>{lastShare?.icon} {lastShare?.recipient}</strong><br/>
+          <span style={{fontSize:12,color:C.textLight}}>{lastShare?.date}</span>
+        </div>
+        <div style={{fontSize:12,color:C.textLight,textAlign:"center",background:"rgba(26,111,160,0.06)",borderRadius:13,padding:"10px 16px",lineHeight:1.6}}>
+          In the full version this generates a secure PDF report sent directly to the recipient.
+        </div>
+        <button onClick={()=>setScreen("viewDoc")} className="btn-blue" style={{width:"100%",maxWidth:300}}>← Back to Record</button>
+        <button onClick={()=>setScreen("share")} className="btn-outline" style={{width:"100%",maxWidth:300}}>Share with Someone Else</button>
+      </div>
+    );
+  }
 
   // Main screen
   return(
@@ -1838,19 +1891,99 @@ const TrendsTab=({history})=>{
 };
 
 /* ══ PROFILE TAB ══ */
-const ProfileTab=({user,onLogout,onShowPaywall})=>{
+const ProfileTab=({user,onLogout,onShowPaywall,onUpdateUser})=>{
   const isPaid=["normal_monthly","normal_annual","premium_monthly","premium_annual"].includes(user?.plan);
   const daysLeft=Math.max(0,5-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
-  const [screen,setScreen]=useState("main"); // main | mydata | deleteConfirm
+  const [screen,setScreen]=useState("main"); // main | editProfile | mydata | deleteConfirm
   const [deleting,setDeleting]=useState(false);
   const [deleted,setDeleted]=useState(false);
+
+  // Edit profile state
+  const [editName,setEditName]=useState(user?.name||"");
+  const [editDob,setEditDob]=useState(user?.dob||"");
+  const [editGender,setEditGender]=useState(user?.gender||"");
+  const [editSilhouette,setEditSilhouette]=useState(user?.silhouette||2);
+  const [saving,setSaving]=useState(false);
+  const [savedOk,setSavedOk]=useState(false);
 
   // Count stored data
   const storageKey=`p2c_vdocs_${user?.uid||user?.email||"local"}`;
   const vdocs=JSON.parse(localStorage.getItem(storageKey)||"[]");
   const hasPin=!!localStorage.getItem(`p2c_vpin_${user?.uid||user?.email||"local"}`);
 
-  const deleteAllData=async()=>{
+  // Edit Profile screen
+  if(screen==="editProfile") return(
+    <div style={{animation:"fadeIn 0.3s ease both"}}>
+      <div style={{padding:"18px 22px 0",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={()=>setScreen("main")} style={{background:"rgba(26,111,160,0.09)",border:"none",borderRadius:9,padding:"5px 12px",fontSize:12,fontWeight:700,color:C.blue,cursor:"pointer"}}>← Back</button>
+        <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:17,color:C.textDark}}>✏️ Edit Profile</div>
+      </div>
+
+      {/* Avatar */}
+      <GCard style={{marginTop:14,textAlign:"center",paddingTop:22,paddingBottom:22}}>
+        <div style={{width:68,height:68,borderRadius:"50%",background:"linear-gradient(135deg,#1a6fa0,#2d9a6e)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,margin:"0 auto 10px",color:"#fff",fontFamily:"'Montserrat',sans-serif",fontWeight:800}}>
+          {editName?.[0]?.toUpperCase()||"U"}
+        </div>
+        <div style={{fontSize:12,color:C.textLight}}>{user?.email}</div>
+      </GCard>
+
+      <GCard>
+        {/* Name */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Full Name</div>
+          <input className="field" value={editName} onChange={e=>setEditName(e.target.value)} placeholder="Your name"/>
+        </div>
+        {/* DOB */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Date of Birth</div>
+          <input className="field" type="date" value={editDob} onChange={e=>setEditDob(e.target.value)}/>
+        </div>
+        {/* Gender */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Gender</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {["Male","Female","Non-binary","Prefer not to say"].map(g=>(
+              <button key={g} onClick={()=>setEditGender(g)}
+                style={{padding:"8px 14px",borderRadius:20,border:`1.5px solid ${editGender===g?C.blue:"rgba(26,111,160,0.2)"}`,background:editGender===g?"rgba(26,111,160,0.1)":"transparent",color:editGender===g?C.blue:C.textMid,fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+                {g}
+              </button>
+            ))}
+          </div>
+        </div>
+        {/* Body type */}
+        <div>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Body Type</div>
+          <div style={{display:"flex",gap:10}}>
+            {[{v:1,label:"Slim"},{v:2,label:"Normal"},{v:3,label:"Large"}].map(b=>(
+              <button key={b.v} onClick={()=>setEditSilhouette(b.v)}
+                style={{flex:1,padding:"10px 0",borderRadius:14,border:`1.5px solid ${editSilhouette===b.v?C.blue:"rgba(26,111,160,0.2)"}`,background:editSilhouette===b.v?"rgba(26,111,160,0.1)":"transparent",color:editSilhouette===b.v?C.blue:C.textMid,fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:"'Nunito',sans-serif"}}>
+                {b.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </GCard>
+
+      <GCard style={{background:"rgba(26,111,160,0.04)"}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Email</div>
+        <div style={{fontSize:13,color:C.textMid}}>{user?.email}</div>
+        <div style={{fontSize:11,color:C.textLight,marginTop:4}}>Email cannot be changed here.</div>
+      </GCard>
+
+      <div style={{margin:"0 18px 32px"}}>
+        <button onClick={async()=>{
+          setSaving(true);
+          const updated={...user,name:editName,dob:editDob,gender:editGender,silhouette:editSilhouette};
+          await onUpdateUser(updated);
+          await new Promise(r=>setTimeout(r,500));
+          setSaving(false);setSavedOk(true);
+          setTimeout(()=>{setSavedOk(false);setScreen("main");},1200);
+        }} className="btn-blue" disabled={saving||!editName}>
+          {savedOk?"✅ Saved!":saving?"Saving…":"💾 Save Changes"}
+        </button>
+      </div>
+    </div>
+  );
     setDeleting(true);
     // Clear localStorage
     const keysToDelete=Object.keys(localStorage).filter(k=>k.includes(user?.uid||user?.email||"local")||k.includes("p2c_"));
@@ -1989,7 +2122,7 @@ const ProfileTab=({user,onLogout,onShowPaywall})=>{
       <GCard>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>Account</div>
         {[
-          {icon:"✏️",label:"Edit Profile",action:null},
+          {icon:"✏️",label:"Edit Profile",action:()=>{setEditName(user?.name||"");setEditDob(user?.dob||"");setEditGender(user?.gender||"");setEditSilhouette(user?.silhouette||2);setScreen("editProfile");}},
           {icon:"🔔",label:"Notifications",action:null},
           {icon:"🌍",label:"Language",action:null},
           {icon:"🔐",label:"My Data & Privacy (GDPR)",action:()=>setScreen("mydata"),highlight:true},
@@ -2009,10 +2142,21 @@ const ProfileTab=({user,onLogout,onShowPaywall})=>{
 };
 
 /* ══ MAIN APP ══ */
-const MainApp=({user,onLogout,onShowPaywall})=>{
+const MainApp=({user:initialUser,onLogout,onShowPaywall})=>{
   const [tab,setTab]=useState("home");
   const [history,setHistory]=useState(seedHistory);
+  const [user,setUser]=useState(initialUser);
   const handleSetTab=(t)=>setTab(t);
+  const handleUpdateUser=async(updated)=>{
+    setUser(updated);
+    // Save to session
+    const sk=Object.keys(sessionStorage).find(k=>k.includes("p2c_session"));
+    if(sk) sessionStorage.setItem(sk,JSON.stringify(updated));
+    // Save to Firebase
+    if(window._fbReady&&fbDb&&fbRef&&fbSet&&updated.uid){
+      try{await fbSet(fbRef(fbDb,`users/${updated.uid}`),{name:updated.name,email:updated.email,dob:updated.dob||"",gender:updated.gender||"",silhouette:updated.silhouette,plan:updated.plan,trialStart:updated.trialStart});}catch(e){}
+    }
+  };
   const renderContent=()=>{
     switch(tab){
       case "home": return <HomeTab user={user} onModuleSelect={setTab} onShowPaywall={onShowPaywall} history={history}/>;
@@ -2021,7 +2165,7 @@ const MainApp=({user,onLogout,onShowPaywall})=>{
       case "trauma": return <TraumaModule user={user}/>;
       case "community": return <CommunityModule user={user}/>;
       case "trends": return <TrendsTab history={history}/>;
-      case "profile": return <ProfileTab user={user} onLogout={onLogout} onShowPaywall={onShowPaywall}/>;
+      case "profile": return <ProfileTab user={user} onLogout={onLogout} onShowPaywall={onShowPaywall} onUpdateUser={handleUpdateUser}/>;
       default: return <HomeTab user={user} onModuleSelect={setTab} onShowPaywall={onShowPaywall} history={history}/>;
     }
   };
