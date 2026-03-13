@@ -1386,26 +1386,67 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
         <div style={{fontSize:10,fontWeight:700,color:C.blue,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5}}>Today's Reminder 💙</div>
         <div style={{fontSize:14,fontStyle:"italic",lineHeight:1.65,color:C.textMid}}>"{AFFIRMATIONS[affIdx]}"</div>
       </div>
-      {history.length>0&&(
-        <div style={{display:"flex",gap:10,padding:"0 18px",marginBottom:18,overflowX:"auto",alignItems:"center"}}>
-          {[
-            {label:"Last Pain",value:`${history[history.length-1]?.painLevel}/10`,color:C.red},
-            {label:"Avg Pain",value:`${(history.reduce((a,b)=>a+b.painLevel,0)/history.length).toFixed(1)}/10`,color:C.blue},
-            {label:"Check-Ins",value:history.length,color:C.green}
-          ].map(s=>(
-            <div key={s.label} className="glass" style={{borderRadius:13,padding:"11px 14px",flexShrink:0,minWidth:85}}>
-              <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:3}}>{s.label}</div>
-              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:21,color:s.color}}>{s.value}</div>
+      {history.length>0&&(()=>{
+        const last=history[history.length-1];
+        const week7=history.filter(h=>{const d=new Date(h.fullDate||h.date);const c=new Date();c.setDate(c.getDate()-7);return d>=c;});
+        const avg7=week7.length>0?(week7.reduce((a,b)=>a+b.painLevel,0)/week7.length).toFixed(1):null;
+        // Trend: compare last 3 vs previous 3
+        const recent=history.slice(-3);
+        const prev=history.slice(-6,-3);
+        const trendVal=recent.length>0&&prev.length>0
+          ?((recent.reduce((a,b)=>a+b.painLevel,0)/recent.length)-(prev.reduce((a,b)=>a+b.painLevel,0)/prev.length)).toFixed(1)
+          :null;
+        const trendUp=trendVal>0;
+        const trendColor=trendVal>0?C.red:trendVal<0?C.green:C.textLight;
+        const trendIcon=trendVal>0?"↑":trendVal<0?"↓":"→";
+        // Streak: consecutive days with entries
+        const sortedDates=[...new Set(history.map(h=>h.fullDate||h.date))].sort();
+        let streak=0;
+        const today=new Date();
+        for(let i=sortedDates.length-1;i>=0;i--){
+          const d=new Date(sortedDates[i]);
+          const diff=Math.round((today-d)/86400000);
+          if(diff<=streak+1) streak++;
+          else break;
+        }
+        return(
+        <div style={{padding:"0 18px",marginBottom:18}}>
+          {/* Row 1: Last pain + 7d avg + history */}
+          <div style={{display:"flex",gap:8,marginBottom:8}}>
+            <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
+              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Last pain</div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:C.red,lineHeight:1}}>{last?.painLevel}/10</div>
+              <div style={{fontSize:9,color:C.textLight,marginTop:2}}>{last?.fullDate||last?.date}</div>
             </div>
-          ))}
-          <div onClick={()=>onModuleSelect("pain-trends")}
-            className="glass"
-            style={{borderRadius:13,padding:"11px 14px",flexShrink:0,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:52,userSelect:"none",WebkitTapHighlightColor:"transparent"}}>
-            <span style={{fontSize:24}}>📈</span>
-            <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginTop:4}}>History</div>
+            <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
+              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Avg pain · 7d</div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:C.blue,lineHeight:1}}>{avg7??"-"}{avg7&&"/10"}</div>
+              <div style={{fontSize:9,color:C.textLight,marginTop:2}}>{week7.length} check-in{week7.length!==1?"s":""}</div>
+            </div>
+            <div onClick={()=>onModuleSelect("pain-trends")} className="glass"
+              style={{borderRadius:13,padding:"11px 14px",flexShrink:0,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minWidth:52,userSelect:"none",WebkitTapHighlightColor:"transparent"}}>
+              <span style={{fontSize:22}}>📈</span>
+              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginTop:3}}>History</div>
+            </div>
+          </div>
+          {/* Row 2: Trend + Streak */}
+          <div style={{display:"flex",gap:8}}>
+            {trendVal!==null&&(
+            <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
+              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Pain trend</div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:trendColor,lineHeight:1}}>{trendVal>0?"+":""}{trendVal} {trendIcon}</div>
+              <div style={{fontSize:9,color:C.textLight,marginTop:2}}>vs. previous period</div>
+            </div>
+            )}
+            <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
+              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Streak</div>
+              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:C.gold,lineHeight:1}}>{streak} 🔥</div>
+              <div style={{fontSize:9,color:C.textLight,marginTop:2}}>day{streak!==1?"s":""} in a row</div>
+            </div>
           </div>
         </div>
-      )}
+        );
+      })()}
       <div style={{padding:"0 18px"}}>
         <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:12}}>Your Modules</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
