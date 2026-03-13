@@ -2479,12 +2479,30 @@ const CheckInEntry=({entry,isLast})=>{
                 {activeAreas.map(a=>{
                   const col=a.maxIntensity>=7?C.red:a.maxIntensity>=4?C.gold:C.green;
                   const bg=a.maxIntensity>=7?"rgba(220,50,50,0.07)":a.maxIntensity>=4?"rgba(240,165,0,0.07)":"rgba(50,180,100,0.07)";
+                  const subAreas=Object.entries(a.subareas||{}).filter(([,v])=>v>0).sort((x,y)=>y[1]-x[1]);
+                  const displayVal=subAreas.length>1?Math.round(subAreas.reduce((s,[,v])=>s+v,0)/subAreas.length):a.maxIntensity;
+                  const displayCol=displayVal>=7?C.red:displayVal>=4?C.gold:C.green;
+                  const displayBg=displayVal>=7?"rgba(220,50,50,0.07)":displayVal>=4?"rgba(240,165,0,0.07)":"rgba(50,180,100,0.07)";
                   return(
-                    <span key={a.id} style={{fontSize:12,background:bg,border:`1px solid ${col}40`,borderRadius:20,padding:"4px 10px",color:C.textMid}}>
-                      {a.label} <span style={{fontWeight:700,color:col}}>{a.maxIntensity}/10</span>
-                      {a.hasSwelling&&<span style={{marginLeft:4}}>💧</span>}
-                      {a.hasNumbness&&<span style={{marginLeft:2}}>⚡</span>}
-                    </span>
+                    <div key={a.id} style={{width:"100%"}}>
+                      <span style={{fontSize:12,background:displayBg,border:`1px solid ${displayCol}40`,borderRadius:20,padding:"4px 10px",color:C.textMid,display:"inline-flex",alignItems:"center",gap:4}}>
+                        {a.label} <span style={{fontWeight:700,color:displayCol}}>{displayVal}/10</span>
+                        {a.hasSwelling&&<span>💧</span>}
+                        {a.hasNumbness&&<span>⚡</span>}
+                      </span>
+                      {subAreas.length>0&&(
+                        <div style={{display:"flex",flexWrap:"wrap",gap:5,marginTop:5,paddingLeft:8}}>
+                          {subAreas.map(([name,val])=>{
+                            const sc=val>=7?C.red:val>=4?C.gold:C.green;
+                            return(
+                              <span key={name} style={{fontSize:11,background:"rgba(26,111,160,0.06)",border:"1px solid rgba(26,111,160,0.15)",borderRadius:20,padding:"3px 8px",color:C.textMid}}>
+                                📍 {name} <span style={{fontWeight:700,color:sc}}>{val}/10</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
