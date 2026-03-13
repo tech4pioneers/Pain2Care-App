@@ -1155,7 +1155,7 @@ const RegisterScreen=({onGoLogin,onRegistered})=>{
         <p><strong>1. Acceptance</strong><br/>By using Pain2Care, you agree to these Terms.</p><br/>
         <p><strong>2. Not Medical Advice</strong><br/>Pain2Care is a self-tracking tool only — not a medical device or diagnosis tool. Always consult a qualified healthcare provider.</p><br/>
         <p><strong>3. Privacy</strong><br/>Your health data is stored securely. We never sell your personal data to third parties.</p><br/>
-        <p><strong>4. Free Trial</strong><br/>A 7-day free trial is provided. After the trial, a subscription is required to continue using the app.</p><br/>
+        <p><strong>4. Free Trial</strong><br/>A 5-day free trial is provided (same features as Normal Plan). After the trial, a subscription is required to continue. Premium features are not available during the trial.</p><br/>
         <p><strong>5. Community</strong><br/>The community chat is anonymous and supportive. Harmful or abusive content is not permitted.</p><br/>
         <p><strong>6. Limitation of Liability</strong><br/>Pain2Care is not liable for any decisions made based on app data.</p><br/>
         <p><strong>7. Changes</strong><br/>We may update these terms with notice via the app.</p>
@@ -1302,7 +1302,7 @@ const WelcomeScreen=({user,onContinue})=>{
 
 const PaywallScreen=({user,onSubscribe,onLogout})=>{
   const [plan,setPlan]=useState("monthly"); const [loading,setLoading]=useState(false);
-  const daysLeft=Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  const daysLeft=Math.max(0,5-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
   const doSub=async()=>{
     setLoading(true); await new Promise(r=>setTimeout(r,1200));
     const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
@@ -1360,7 +1360,7 @@ const PaywallScreen=({user,onSubscribe,onLogout})=>{
 
 /* ══ HOME TAB ══ */
 const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
-  const daysLeft=Math.max(0,7-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
+  const daysLeft=Math.max(0,5-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
   const isPaid=user?.plan==="monthly"||user?.plan==="annual";
   const todayKey="p2c_reminder_"+new Date().toISOString().slice(0,10);
   const [reminder,setReminder]=useState(()=>localStorage.getItem(todayKey)||null);
@@ -1408,11 +1408,18 @@ Be empathetic, realistic and encouraging. Do NOT use generic platitudes. Tailor 
   return(
     <div style={{padding:"10px 0",animation:"fadeIn 0.4s ease both"}}>
       {!isPaid&&daysLeft>0&&(
-        <div onClick={onShowPaywall} className="glass" style={{margin:"0 18px 14px",borderRadius:13,padding:"11px 14px",display:"flex",alignItems:"center",gap:11,cursor:"pointer",border:"1px solid rgba(244,162,97,0.35)"}}>
-          <span style={{fontSize:17}}>⏳</span>
-          <div style={{flex:1}}><div style={{fontWeight:800,fontSize:12,color:C.gold}}>{daysLeft} days left in free trial</div>
-          <div style={{fontSize:11,color:C.textLight}}>Tap to upgrade</div></div>
-          <span style={{color:C.gold,fontSize:14}}>→</span>
+        <div className="glass" style={{margin:"0 18px 14px",borderRadius:13,padding:"13px 15px",border:"1px solid rgba(244,162,97,0.35)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+            <span style={{fontSize:18}}>⏳</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:13,color:C.gold}}>{daysLeft} day{daysLeft!==1?"s":""} left in free trial</div>
+            </div>
+            <div onClick={onShowPaywall} style={{cursor:"pointer",background:C.gold,color:"#fff",fontSize:11,fontWeight:800,borderRadius:8,padding:"4px 10px"}}>Upgrade →</div>
+          </div>
+          <div style={{fontSize:11,color:C.textMid,lineHeight:1.5}}>
+            ✅ Free trial includes all <strong>Normal Plan</strong> features<br/>
+            🔒 Premium features not available during trial
+          </div>
         </div>
       )}
       <div style={{padding:"0 22px",marginBottom:18}}>
