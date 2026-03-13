@@ -2238,7 +2238,7 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack,initialTab})=>{
     const activeAreas=Object.entries(areaSymptoms).filter(([,v])=>v?.maxIntensity>0);
     return(
       <div style={{animation:"scaleIn 0.35s ease both"}}>
-        <SectionTitle icon="✅" title=T.todaysReport sub=T.hereIsHow/>
+        <SectionTitle icon="✅" title={T.todaysReport} sub={T.hereIsHow}/>
         <GCard style={{textAlign:"center",padding:28}}>
           <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>{T.wellbeingScore}</div>
           <div style={{fontSize:52,lineHeight:1,marginBottom:6}}>{renderStars(toStars(score),40)}</div>
@@ -2291,7 +2291,7 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack,initialTab})=>{
 
   return(
     <div>
-      <SectionTitle icon="🩺" title=T.painModule sub=T.painModuleSub onBack={onBack} onHome={onBack}/>
+      <SectionTitle icon="🩺" title={T.painModule} sub={T.painModuleSub} onBack={onBack} onHome={onBack}/>
 
       {/* Tab bar */}
       <div style={{display:"flex",margin:"6px 18px 10px",borderRadius:14,background:"rgba(26,111,160,0.08)",padding:3}}>
