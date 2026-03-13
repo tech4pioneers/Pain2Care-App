@@ -1479,9 +1479,10 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack,initialTab})=>{
       <div style={{animation:"scaleIn 0.35s ease both"}}>
         <SectionTitle icon="✅" title="Today's Report" sub="Here's how you showed up today"/>
         <GCard style={{textAlign:"center",padding:28}}>
-          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Recovery Index</div>
-          <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:76,fontWeight:800,color:sc,lineHeight:1}}>{score}</div>
-          <div style={{fontSize:13,color:C.textLight,marginTop:5}}>out of 30 · {score>=20?"Keep pushing!":score>=12?"You're doing okay":"Be gentle with yourself"}</div>
+          <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Wellbeing Score</div>
+          <div style={{fontSize:52,lineHeight:1,marginBottom:6}}>{renderStars(toStars(score),40)}</div>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:32,fontWeight:800,color:starsColor(toStars(score)),lineHeight:1}}>{toStars(score).toFixed(1)} / 5</div>
+          <div style={{fontSize:13,color:C.textLight,marginTop:6}}>{starsLabel(toStars(score))}</div>
         </GCard>
         <GCard>
           <div style={{fontWeight:800,fontSize:14,color:C.textDark,marginBottom:13}}>📊 Snapshot</div>
@@ -2401,6 +2402,137 @@ const CommunityModule=({user,onBack})=>{
 };
 
 /* ══ TRENDS TAB ══ */
+
+const toStars=(score)=>{
+  // score 0-30 → 1-5 stars (rounded to nearest 0.5)
+  const raw=1+(score/30)*4;
+  const rounded=Math.round(raw*2)/2;
+  return Math.min(5,Math.max(1,rounded));
+};
+const renderStars=(stars,size=18)=>{
+  const full=Math.floor(stars);
+  const half=stars%1>=0.5;
+  const empty=5-full-(half?1:0);
+  const s={fontSize:size,lineHeight:1};
+  return React.createElement('span',{style:s},
+    '⭐'.repeat(full)+(half?'✨':'')+('☆'.repeat(empty))
+  );
+};
+const starsColor=(stars)=>stars>=4?C.green:stars>=3?C.gold:C.red;
+const starsLabel=(stars)=>stars>=4.5?"Excellent day":stars>=3.5?"Good day":stars>=2.5?"Okay day":stars>=1.5?"Tough day":"Very hard day";
+
+/* ══ CHECK-IN LOG COMPONENT ══ */
+const CheckInEntry=({entry,isLast})=>{
+  const [open,setOpen]=useState(false);
+  const activeAreas=(entry.areas||[]).filter(a=>a.maxIntensity>0);
+  const selMood=MOODS.find(m=>m.value===entry.mood);
+  const painCol=entry.painLevel>=7?C.red:entry.painLevel>=4?C.gold:C.green;
+  const stars=toStars(entry.score);
+  const starsCol=starsColor(stars);
+  const fullStars=Math.floor(stars);
+  const halfStar=stars%1>=0.5;
+  const emptyStars=5-fullStars-(halfStar?1:0);
+  return(
+    <div style={{borderBottom:isLast?"none":"1px solid rgba(26,111,160,0.08)"}}>
+      {/* ── COMPACT ROW (always visible, clickable) ── */}
+      <div onClick={()=>setOpen(o=>!o)} style={{display:"flex",alignItems:"center",gap:10,padding:"12px 0",cursor:"pointer",userSelect:"none",WebkitTapHighlightColor:"transparent"}}>
+        {/* Expand arrow */}
+        <span style={{fontSize:12,color:C.textLight,transition:"transform 0.2s",display:"inline-block",transform:open?"rotate(90deg)":"rotate(0deg)",flexShrink:0}}>▶</span>
+        {/* Date */}
+        <div style={{fontWeight:700,fontSize:13,color:C.textDark,minWidth:52}}>{entry.fullDate}</div>
+        {/* Stars compact */}
+        <div style={{fontSize:13,letterSpacing:1,flex:1}}>
+          {"⭐".repeat(fullStars)}{halfStar?"✨":""}<span style={{opacity:0.2}}>{"⭐".repeat(emptyStars)}</span>
+        </div>
+        {/* Pain badge */}
+        <span style={{fontSize:11,fontWeight:700,background:entry.painLevel>=7?"rgba(220,50,50,0.1)":entry.painLevel>=4?"rgba(240,165,0,0.1)":"rgba(50,180,100,0.1)",color:painCol,borderRadius:20,padding:"3px 9px",flexShrink:0}}>
+          {entry.painLevel}/10
+        </span>
+        {/* Mood emoji */}
+        {selMood&&<span style={{fontSize:16,flexShrink:0}}>{selMood.emoji}</span>}
+      </div>
+      {/* ── EXPANDED DETAIL ── */}
+      {open&&(
+        <div style={{paddingBottom:14,animation:"fadeIn 0.2s ease both"}}>
+          {/* Wellbeing stars row */}
+          <div style={{background:"rgba(26,111,160,0.04)",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Wellbeing</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{fontSize:22,letterSpacing:2}}>
+                {"⭐".repeat(fullStars)}{halfStar?"✨":""}<span style={{opacity:0.2}}>{"⭐".repeat(emptyStars)}</span>
+              </div>
+              <span style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:16,color:starsCol}}>{stars.toFixed(1)}<span style={{fontSize:11,fontWeight:400,color:C.textLight}}>/5</span></span>
+              <span style={{fontSize:12,color:C.textLight,marginLeft:2}}>{starsLabel(stars)}</span>
+            </div>
+          </div>
+          {/* Pain section */}
+          <div style={{marginBottom:10}}>
+            <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>Pain</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <span style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:20,color:painCol}}>{entry.painLevel}<span style={{fontSize:12,fontWeight:400,color:C.textLight}}>/10</span></span>
+              <div style={{flex:1,height:5,background:"rgba(26,111,160,0.1)",borderRadius:4}}>
+                <div style={{width:`${entry.painLevel*10}%`,height:"100%",background:`linear-gradient(90deg,${C.green},${C.gold},${C.red})`,borderRadius:4}}/>
+              </div>
+            </div>
+            {activeAreas.length>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {activeAreas.map(a=>{
+                  const col=a.maxIntensity>=7?C.red:a.maxIntensity>=4?C.gold:C.green;
+                  const bg=a.maxIntensity>=7?"rgba(220,50,50,0.07)":a.maxIntensity>=4?"rgba(240,165,0,0.07)":"rgba(50,180,100,0.07)";
+                  return(
+                    <span key={a.id} style={{fontSize:12,background:bg,border:`1px solid ${col}40`,borderRadius:20,padding:"4px 10px",color:C.textMid}}>
+                      {a.label} <span style={{fontWeight:700,color:col}}>{a.maxIntensity}/10</span>
+                      {a.hasSwelling&&<span style={{marginLeft:4}}>💧</span>}
+                      {a.hasNumbness&&<span style={{marginLeft:2}}>⚡</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {/* Mood + checks */}
+          <div style={{fontSize:10,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8}}>Today's answers</div>
+          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+            {selMood&&(
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:16,width:22,textAlign:"center"}}>{selMood.emoji}</span>
+                <span style={{fontSize:13,color:C.textMid}}>Mood: <span style={{fontWeight:700,color:C.textDark}}>{selMood.label}</span></span>
+              </div>
+            )}
+            {TRAUMA_CHECKS.map(tc=>{
+              const checked=entry.checkedCount>0;
+              if(!entry.traumaChecks&&entry.checkedCount===0) return null;
+              const isChecked=entry.traumaChecks?entry.traumaChecks[tc.id]:false;
+              if(!isChecked) return null;
+              const isPositive=tc.id==="safe"||tc.id==="grounded"||tc.id==="support";
+              return(
+                <div key={tc.id} style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:15,width:22,textAlign:"center"}}>{tc.icon}</span>
+                  <span style={{fontSize:12,color:C.textMid,flex:1}}>{tc.label}</span>
+                  <span style={{fontSize:11,background:isPositive?"rgba(29,158,117,0.08)":"rgba(220,50,50,0.08)",color:isPositive?C.teal:C.red,borderRadius:20,padding:"2px 8px",flexShrink:0}}>✓</span>
+                </div>
+              );
+            })}
+            {entry.notes&&(
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginTop:2}}>
+                <span style={{fontSize:15,width:22,textAlign:"center"}}>📝</span>
+                <span style={{fontSize:12,color:C.textMid,fontStyle:"italic"}}>"{entry.notes}"</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+const CheckInLog=({entries})=>(
+  <div>
+    {[...entries].reverse().map((entry,i)=>(
+      <CheckInEntry key={entry.id} entry={entry} isLast={i===entries.length-1}/>
+    ))}
+  </div>
+);
+
 const PERIOD_OPTIONS=[
   {label:"7d",days:7},
   {label:"30d",days:30},
@@ -2469,7 +2601,7 @@ const TrendsTab=({history,onBack,embedded})=>{
       <div style={{display:"flex",gap:10,padding:"0px 18px 4px",overflowX:"auto"}}>
         {displayHistory.length>0?[
           {label:"Avg Pain",value:(displayHistory.reduce((a,b)=>a+b.painLevel,0)/displayHistory.length).toFixed(1),color:C.red},
-          {label:"Avg Score",value:(displayHistory.reduce((a,b)=>a+b.score,0)/displayHistory.length).toFixed(0),color:C.blue},
+          {label:"Wellbeing",value:toStars(displayHistory.reduce((a,b)=>a+b.score,0)/displayHistory.length).toFixed(1)+"⭐",color:C.gold},
           {label:"Best Day",value:displayHistory.reduce((a,b)=>b.score>a.score?b:a,displayHistory[0]).date,color:C.green},
           {label:"Trend",value:trend>0?`+${trend}↑`:trend<0?`${trend}↓`:"=",color:trend>0?C.red:trend<0?C.green:C.textLight}
         ].map(s=>(
@@ -2485,41 +2617,13 @@ const TrendsTab=({history,onBack,embedded})=>{
         <MiniChart data={chartData.map(d=>({v:d.Pain,day:d.day}))} color={C.red} maxVal={10} height={100} filled={true}/>
       </GCard>
       <GCard>
-        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>📈 Recovery Score</div>
-        <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Higher is better · max 30</div>
+        <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:3}}>⭐ Wellbeing Score</div>
+        <div style={{fontSize:11,color:C.textLight,marginBottom:8}}>Higher is better · 1–5 stars</div>
         <MiniChart data={chartData.map(d=>({v:d.Score,day:d.day}))} color={C.blue} maxVal={30} height={100} filled={false}/>
       </GCard>
       <GCard>
         <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:13}}>🗂 Check-In Log</div>
-        {[...displayHistory].reverse().map((entry,i)=>{const sc=entry.score>=20?C.green:entry.score>=12?C.gold:C.red;
-          const activeAreas=(entry.areas||[]).filter(a=>a.maxIntensity>0);
-          return(
-          <div key={entry.id} style={{padding:"11px 0",borderBottom:i<displayHistory.length-1?"1px solid rgba(26,111,160,0.09)":"none"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:activeAreas.length>0?6:0}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{entry.fullDate}</div>
-                <div style={{fontSize:11,color:C.textLight,marginTop:2}}>Pain {entry.painLevel}/10 · {MOODS.find(m=>m.value===entry.mood)?.emoji||"—"} · {entry.checkedCount} checks</div>
-              </div>
-              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:24,color:sc}}>{entry.score}</div>
-            </div>
-            {activeAreas.length>0&&(
-              <div style={{display:"flex",flexDirection:"column",gap:3,paddingLeft:4,borderLeft:`3px solid ${sc}`}}>
-                {activeAreas.map(a=>{
-                  const painAreas=Object.entries(a.subareas||{}).filter(([,v])=>v>0).map(([n,v])=>`${n} (${v}/10)`).join(', ');
-                  const col=a.maxIntensity>=7?C.red:a.maxIntensity>=4?C.gold:'#b37a00';
-                  return(
-                    <div key={a.id} style={{paddingLeft:8}}>
-                      <span style={{fontSize:12,fontWeight:700,color:C.textMid}}>{a.label}</span>
-                      <span style={{fontSize:11,fontWeight:800,color:col,marginLeft:6}}>{a.maxIntensity}/10</span>
-                      {(a.hasSwelling||a.hasNumbness)&&<span style={{fontSize:10,color:C.blue,marginLeft:6}}>{a.hasSwelling?"Swelling":""}{a.hasSwelling&&a.hasNumbness?" · ":""}{a.hasNumbness?"Numbness":""}</span>}
-                      {painAreas&&<div style={{fontSize:10,color:C.textLight,marginTop:1}}>📍 {painAreas}</div>}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );})}
+        <CheckInLog entries={displayHistory} />
       </GCard>
     </div>
   );
