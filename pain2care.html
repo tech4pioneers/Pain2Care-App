@@ -1423,13 +1423,14 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
           </div>
           {/* Row 2: Trend only */}
           {trendVal!==null&&(
-          <div style={{display:"flex",gap:8}}>
-            <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
-              <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Pain trend · 7d</div>
-              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:trendColor,lineHeight:1}}>{trendVal>0?"+":""}{trendVal} {trendIcon}</div>
-              <div style={{fontSize:9,color:C.textLight,marginTop:2}}>vs. previous 7 entries</div>
+            <div style={{display:"flex",gap:8}}>
+              <div className="glass" style={{borderRadius:13,padding:"11px 14px",flex:1}}>
+                <div style={{fontSize:9,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Pain trend · 7d</div>
+                <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:trendColor,lineHeight:1}}>{trendVal>0?"+":""}{trendVal} {trendIcon}</div>
+                <div style={{fontSize:9,color:C.textLight,marginTop:2}}>vs. previous 7 entries</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
         );
       })()}
