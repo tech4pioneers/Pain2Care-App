@@ -1916,6 +1916,7 @@ const WelcomeScreen=({user,onContinue})=>{
   );
 };
 
+const DISCOUNT_CODES_LIST=["PAIN10","HEAL10","CARE10","P2C2024","WELCOME10","CHRONIC10","RELIEF10","HEALTH10","SUPPORT10","RECOVER10"];
 const DISCOUNT_CODES={
   "PAIN10":10,"HEAL10":10,"CARE10":10,"P2C2024":10,
   "WELCOME10":10,"CHRONIC10":10,"RELIEF10":10,
@@ -3947,7 +3948,7 @@ const AdminDashboard = () => {
   const premiumCount = paidSubs.filter(s=>s.plan?.startsWith("premium")).length;
   const trialUsers = users.filter(u=>u.plan==="trial"||!u.plan).length;
 
-  const DISCOUNT_CODES_LIST = ["PAIN10","HEAL10","CARE10","P2C2024","WELCOME10","CHRONIC10","RELIEF10","HEALTH10","SUPPORT10","RECOVER10"];
+
 
   if (!authed) return (
     <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d2a3f,#1a4060)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
