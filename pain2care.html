@@ -1916,21 +1916,55 @@ const WelcomeScreen=({user,onContinue})=>{
   );
 };
 
+const DISCOUNT_CODES={
+  "PAIN10":10,"HEAL10":10,"CARE10":10,"P2C2024":10,
+  "WELCOME10":10,"CHRONIC10":10,"RELIEF10":10,
+  "HEALTH10":10,"SUPPORT10":10,"RECOVER10":10,
+};
 const PaywallScreen=({user,onSubscribe,onLogout})=>{
   const T=getLang(user);
-  const [tier,setTier]=useState("normal"); // "normal" | "premium"
-  const [billing,setBilling]=useState("monthly"); // "monthly" | "annual"
+  const [tier,setTier]=useState("normal");
+  const [billing,setBilling]=useState("monthly");
   const [loading,setLoading]=useState(false);
+  const [discountCode,setDiscountCode]=useState("");
+  const [appliedDiscount,setAppliedDiscount]=useState(null);
+  const [discountError,setDiscountError]=useState("");
   const daysLeft=Math.max(0,5-Math.floor((Date.now()-(user?.trialStart||Date.now()))/86400000));
-  const prices={normal:{monthly:"€2.99",annual:"€29.99",monthlySub:"/month",annualSub:"/year · Save 16%"},
-                premium:{monthly:"€4.99",annual:"€49.99",monthlySub:"/month",annualSub:"/year · Save 17%"}};
+
+  const basePrice={
+    normal:{monthly:2.99,annual:29.99},
+    premium:{monthly:4.99,annual:49.99},
+  };
+  const calcPrice=(t,b)=>{
+    const base=basePrice[t][b];
+    const disc=appliedDiscount?appliedDiscount.pct:0;
+    const final=base*(1-disc/100);
+    return{
+      display:"€"+final.toFixed(2),
+      original:disc>0?"€"+base.toFixed(2):null,
+      sub:b==="monthly"?"/month":"/year · save 40%",
+    };
+  };
+
+  const applyCode=()=>{
+    const code=discountCode.trim().toUpperCase();
+    if(DISCOUNT_CODES[code]){
+      setAppliedDiscount({code,pct:DISCOUNT_CODES[code]});
+      setDiscountError("");
+      setDiscountCode("");
+    } else {
+      setDiscountError("Invalid code. Please try again.");
+      setAppliedDiscount(null);
+    }
+  };
+
   const planKey=`${tier}_${billing}`;
   const doSub=async()=>{
     setLoading(true); await new Promise(r=>setTimeout(r,1200));
     const users=JSON.parse(localStorage.getItem("p2c_users")||"[]");
     const idx=users.findIndex(u=>u.email===user.email);
     if(idx>=0){users[idx].plan=planKey;localStorage.setItem("p2c_users",JSON.stringify(users));}
-    onSubscribe(planKey); setLoading(false);
+    onSubscribe(planKey, appliedDiscount?.code||null); setLoading(false);
   };
   const normalFeatures=[["✅","Unlimited check-ins"],["📈","Trends & AI insights"],["🩺","Pain body heat map"],["💬","Community chat"],["📄","PDF health reports"]];
   const premiumExtras=[["📸","Secure photo documentation"],["🤖","AI-powered pain analysis"],["👨‍⚕️","Priority support"]];
@@ -1983,31 +2017,11 @@ const PaywallScreen=({user,onSubscribe,onLogout})=>{
         ))}
       </div>
       {/* Billing toggle */}
-      <div className="glass" style={{borderRadius:13,padding:4,display:"flex",gap:4,marginBottom:16}}>
-        {[{id:"monthly",label:T.monthly,price:prices[tier].monthly,sub:prices[tier].monthlySub},
-          {id:"annual",label:"Annual",price:prices[tier].annual,sub:prices[tier].annualSub}].map(p=>(
-          <div key={p.id} onClick={()=>setBilling(p.id)}
-            style={{flex:1,padding:"11px 8px",borderRadius:10,textAlign:"center",cursor:"pointer",
-              background:billing===p.id?(tier==="premium"?"rgba(249,168,37,0.85)":"rgba(26,111,160,0.85)"):"transparent",transition:"all 0.2s"}}>
-            <div style={{fontWeight:700,fontSize:11,color:billing===p.id?"#fff":C.textMid}}>{p.label}</div>
-            <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:billing===p.id?"#fff":C.textDark,marginTop:1}}>{p.price}</div>
-            <div style={{fontSize:10,color:billing===p.id?"rgba(255,255,255,0.75)":C.textLight}}>{p.sub}</div>
-          </div>
-        ))}
-      </div>
-      <button onClick={doSub} disabled={loading}
-        style={{width:"100%",padding:"15px",borderRadius:14,border:"none",cursor:"pointer",fontWeight:800,fontSize:15,color:"#fff",
-          background:tier==="premium"?`linear-gradient(135deg,${C.gold},#e67e00)`:`linear-gradient(135deg,${C.blue},#1a5fa0)`,
-          animation:"glow 2.5s ease-in-out infinite",boxShadow:tier==="premium"?"0 4px 18px rgba(249,168,37,0.4)":"0 4px 18px rgba(26,111,160,0.4)"}}>
-        {loading?"Processing…":`Get ${tier==="premium"?"⭐ Premium":"💙 Normal"} · ${prices[tier][billing]} →`}
-      </button>
-      <div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:10}}>Cancel anytime · No hidden fees</div>
-      {daysLeft>0&&<div style={{textAlign:"center",marginTop:12}}>
-        <span onClick={()=>onSubscribe("trial")} style={{fontSize:12,color:C.textLight,cursor:"pointer",textDecoration:"underline"}}>
-          Continue free trial ({daysLeft} day{daysLeft!==1?"s":""} left)
-        </span>
-      </div>}
-    </div>
+      <div className="glass" style={{borderRadius:13,padding:4,display:"flex",gap:4,marginBottom:16}}>        {[{id:"monthly",label:T.monthly},{id:"annual",label:"Annual (save 40%)"}].map(b=>{          const p=calcPrice(tier,b.id);          return(          <div key={b.id} onClick={()=>setBilling(b.id)}            style={{flex:1,padding:"11px 8px",borderRadius:10,textAlign:"center",cursor:"pointer",              background:billing===b.id?(tier==="premium"?"rgba(249,168,37,0.85)":"rgba(26,111,160,0.85)"):"transparent",transition:"all 0.2s"}}>            <div style={{fontWeight:700,fontSize:11,color:billing===b.id?"#fff":C.textMid}}>{b.label}</div>            <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:5,marginTop:1}}>              {p.original&&<div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:700,fontSize:13,color:billing===b.id?"rgba(255,255,255,0.6)":"#aaa",textDecoration:"line-through"}}>{p.original}</div>}              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:billing===b.id?"#fff":C.textDark}}>{p.display}</div>            </div>            <div style={{fontSize:10,color:billing===b.id?"rgba(255,255,255,0.75)":C.textLight}}>{p.sub}</div>          </div>          );        })}      </div>
+      {/* Discount code */}
+      <div className="glass" style={{borderRadius:13,padding:"12px 14px",marginBottom:14}}>        <div style={{fontSize:11,fontWeight:700,color:C.textMid,marginBottom:8}}>🏷️ Discount Code</div>        {appliedDiscount          ?<div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"rgba(26,160,100,0.1)",borderRadius:9,border:"1px solid rgba(26,160,100,0.3)"}}>            <span style={{fontSize:14}}>✅</span>            <span style={{flex:1,fontSize:13,fontWeight:700,color:"#1a8a50"}}>{appliedDiscount.pct}% discount applied — code: {appliedDiscount.code}</span>            <button onClick={()=>setAppliedDiscount(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#999",padding:0}}>✕</button>          </div>          :<div style={{display:"flex",gap:8}}>            <input              value={discountCode}              onChange={e=>setDiscountCode(e.target.value.toUpperCase())}              onKeyDown={e=>e.key==="Enter"&&applyCode()}              placeholder="Enter code (e.g. PAIN10)"              style={{flex:1,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(26,111,160,0.2)",fontSize:13,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.05em",background:"rgba(255,255,255,0.7)",outline:"none"}}            />            <button onClick={applyCode}              style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.blue,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>              Apply            </button>          </div>        }        {discountError&&<div style={{fontSize:11,color:C.red,marginTop:6}}>⚠️ {discountError}</div>}      </div>
+      {/* Subscribe button */}
+      <button onClick={doSub} disabled={loading}        style={{width:"100%",padding:"15px",borderRadius:14,border:"none",cursor:"pointer",fontWeight:800,fontSize:15,color:"#fff",          background:tier==="premium"?`linear-gradient(135deg,${C.gold},#e67e00)`:`linear-gradient(135deg,${C.blue},#1a5fa0)`,          animation:"glow 2.5s ease-in-out infinite",boxShadow:tier==="premium"?"0 4px 18px rgba(249,168,37,0.4)":"0 4px 18px rgba(26,111,160,0.4)"}}>        {loading?"Processing…":`Get ${tier==="premium"?"⭐ Premium":"💙 Normal"} · ${calcPrice(tier,billing).display} →`}      </button>      <div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:10}}>Cancel anytime · No hidden fees</div>
   );
 };
 
@@ -2019,7 +2033,7 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
   const todayKey="p2c_reminder_"+new Date().toISOString().slice(0,10);
   const [reminder,setReminder]=useState(()=>localStorage.getItem(todayKey)||null);
   const [reminderLoading,setReminderLoading]=useState(false);
-  useEffect(()=>{
+  useEffect(()=>{(async()=>{
     if(reminder) return;
     setReminderLoading(true);
     const last=history[history.length-1];
@@ -2033,26 +2047,23 @@ const HomeTab=({user,onModuleSelect,onShowPaywall,history})=>{
 - Last mood: ${mood}/5
 - Total check-ins: ${history.length}
 Be empathetic, realistic and encouraging. Do NOT use generic platitudes. Tailor the message to their specific situation. Reply with ONLY the reminder text, no quotes or labels.`;
-    fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:100,messages:[{role:"user",content:prompt}]})
-    })
-    .then(r=>r.json())
-    .then(d=>{
+    const fallback=()=>{setReminder(AFFIRMATIONS[Math.floor(Date.now()/86400000)%AFFIRMATIONS.length]);setReminderLoading(false);};
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:100,messages:[{role:"user",content:prompt}]})
+      });
+      const d=await r.json();
       const text=d?.content?.[0]?.text?.trim();
       if(text){
-        // Clear previous day keys
         Object.keys(localStorage).filter(k=>k.startsWith("p2c_reminder_")&&k!==todayKey).forEach(k=>localStorage.removeItem(k));
         localStorage.setItem(todayKey,text);
         setReminder(text);
-      } else {
-        setReminder(AFFIRMATIONS[Math.floor(Date.now()/86400000)%AFFIRMATIONS.length]);
-      }
-    })
-    .catch(()=>setReminder(AFFIRMATIONS[Math.floor(Date.now()/86400000)%AFFIRMATIONS.length]))
-    .finally(()=>setReminderLoading(false));
-  },[]);
+      } else { fallback(); }
+    } catch(e){ fallback(); }
+    setReminderLoading(false);
+  })();},[]); 
   const modules=[
     {id:"pain",icon:"🩺",title:T.painModule,sub:T.chronicPain,color:C.red,border:"rgba(230,57,70,0.2)"},
     {id:"violence",icon:"📸",title:T.violenceReport,sub:T.documentation,color:C.purple,border:"rgba(123,63,158,0.2)"},
@@ -3824,6 +3835,277 @@ const HelpScreen=({onBack,user})=>{
 };
 
 /* ══ MAIN APP ══ */
+
+/* ══ ADMIN DASHBOARD ══ */
+const ADMIN_PASSWORD = "pain2care_admin_2024";
+
+const AdminDashboard = () => {
+  const [authed, setAuthed] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [users, setUsers] = useState([]);
+  const [subs, setSubs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState("overview"); // overview | users | revenue | codes
+
+  const login = () => {
+    if (pw === ADMIN_PASSWORD) { setAuthed(true); loadData(); }
+    else { setPwError("Wrong password"); }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    // Load from localStorage
+    try {
+      const lu = JSON.parse(localStorage.getItem("p2c_users") || "[]");
+      setUsers(lu);
+    } catch(e) {}
+    // Load subscriptions from Firebase
+    if (window._fbReady && fbDb && fbRef && fbOnVal) {
+      try {
+        fbOnVal(fbRef(fbDb, "subscriptions"), snap => {
+          const data = snap.val() || {};
+          setSubs(Object.values(data).sort((a,b) => b.subscribedAt - a.subscribedAt));
+        });
+        fbOnVal(fbRef(fbDb, "users"), snap => {
+          const data = snap.val() || {};
+          setUsers(Object.values(data));
+        });
+      } catch(e) {}
+    }
+    setLoading(false);
+  };
+
+  const planPrice = {normal_monthly:2.99, normal_annual:29.99, premium_monthly:4.99, premium_annual:49.99};
+  const planLabel = {normal_monthly:"Normal Monthly", normal_annual:"Normal Annual", premium_monthly:"Premium Monthly", premium_annual:"Premium Annual", trial:"Free Trial"};
+  const planColor = {normal_monthly:C.blue, normal_annual:C.blue, premium_monthly:C.gold, premium_annual:C.gold, trial:C.textLight};
+
+  const paidSubs = subs.filter(s => s.plan && s.plan !== "trial");
+  const totalRevenue = paidSubs.reduce((a,b) => a + (b.revenue||0), 0);
+  const mrr = paidSubs.filter(s=>s.plan?.includes("monthly")).reduce((a,b)=>a+(b.revenue||0),0)
+             + paidSubs.filter(s=>s.plan?.includes("annual")).reduce((a,b)=>a+(b.revenue||0),0)/12;
+  const discountUsed = paidSubs.filter(s=>s.discountCode).length;
+  const normalCount = paidSubs.filter(s=>s.plan?.startsWith("normal")).length;
+  const premiumCount = paidSubs.filter(s=>s.plan?.startsWith("premium")).length;
+  const trialUsers = users.filter(u=>u.plan==="trial"||!u.plan).length;
+
+  const DISCOUNT_CODES_LIST = ["PAIN10","HEAL10","CARE10","P2C2024","WELCOME10","CHRONIC10","RELIEF10","HEALTH10","SUPPORT10","RECOVER10"];
+
+  if (!authed) return (
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#0d2a3f,#1a4060)",display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{background:"rgba(255,255,255,0.05)",borderRadius:20,padding:32,width:"100%",maxWidth:360,border:"1px solid rgba(255,255,255,0.1)"}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:32,marginBottom:8}}>🔐</div>
+          <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:20,fontWeight:800,color:"#fff"}}>Admin Dashboard</div>
+          <div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>Pain2Care · Internal</div>
+        </div>
+        <input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&login()}
+          placeholder="Admin password" style={{width:"100%",padding:"12px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.08)",color:"#fff",fontSize:14,boxSizing:"border-box",outline:"none",marginBottom:10}}/>
+        {pwError && <div style={{fontSize:12,color:"#ff6877",marginBottom:8}}>⚠️ {pwError}</div>}
+        <button onClick={login} style={{width:"100%",padding:"12px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#1a6fa0,#0e4f78)",color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer"}}>
+          Sign In →
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{minHeight:"100vh",background:"#f0f4f8",fontFamily:"'Nunito',sans-serif"}}>
+      {/* Header */}
+      <div style={{background:"linear-gradient(135deg,#0d2a3f,#1a4060)",padding:"16px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{fontSize:22}}>📊</div>
+          <div>
+            <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:16,fontWeight:800,color:"#fff"}}>Pain2Care Admin</div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.5)"}}>Dashboard · {new Date().toLocaleDateString()}</div>
+          </div>
+        </div>
+        <button onClick={()=>{setAuthed(false);setPw("");}} style={{background:"rgba(255,255,255,0.1)",border:"none",borderRadius:8,padding:"6px 14px",color:"rgba(255,255,255,0.7)",fontSize:12,cursor:"pointer"}}>
+          Sign Out
+        </button>
+      </div>
+
+      {/* Tab nav */}
+      <div style={{background:"#fff",borderBottom:"1px solid #e0eaf0",display:"flex",gap:0,padding:"0 24px"}}>
+        {[{id:"overview",label:"📈 Overview"},{id:"users",label:"👥 Users"},{id:"revenue",label:"💰 Revenue"},{id:"codes",label:"🏷️ Discount Codes"}].map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            style={{padding:"14px 18px",border:"none",borderBottom:tab===t.id?"3px solid #1a6fa0":"3px solid transparent",background:"transparent",fontWeight:tab===t.id?800:600,fontSize:13,color:tab===t.id?C.blue:C.textLight,cursor:"pointer",transition:"all 0.15s"}}>
+            {t.label}
+          </button>
+        ))}
+        <button onClick={loadData} style={{marginLeft:"auto",padding:"10px 14px",background:"none",border:"none",fontSize:12,color:C.textLight,cursor:"pointer"}}>🔄 Refresh</button>
+      </div>
+
+      <div style={{padding:24,maxWidth:1100,margin:"0 auto"}}>
+
+        {/* OVERVIEW */}
+        {tab==="overview" && (
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))",gap:16,marginBottom:24}}>
+              {[
+                {label:"Total Users",value:users.length,icon:"👥",color:C.blue},
+                {label:"Paid Subscribers",value:paidSubs.length,icon:"💳",color:C.green},
+                {label:"Free Trial",value:trialUsers,icon:"⏳",color:C.gold},
+                {label:"Total Revenue",value:"€"+totalRevenue.toFixed(2),icon:"💰",color:"#16a34a"},
+                {label:"Est. MRR",value:"€"+mrr.toFixed(2),icon:"📈",color:C.blue},
+                {label:"Discount Used",value:discountUsed,icon:"🏷️",color:C.purple},
+              ].map(stat=>(
+                <div key={stat.label} style={{background:"#fff",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                    <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em"}}>{stat.label}</div>
+                    <span style={{fontSize:20}}>{stat.icon}</span>
+                  </div>
+                  <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:28,fontWeight:800,color:stat.color}}>{stat.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Plan breakdown */}
+            <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7",marginBottom:16}}>
+              <div style={{fontWeight:800,fontSize:15,color:C.textDark,marginBottom:16}}>Plan Breakdown</div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12}}>
+                {Object.entries(
+                  paidSubs.reduce((acc,s)=>{acc[s.plan]=(acc[s.plan]||0)+1;return acc;},{})
+                ).map(([plan,count])=>(
+                  <div key={plan} style={{background:"#f8fafc",borderRadius:10,padding:"12px 14px",border:`1px solid ${planColor[plan]||C.blue}30`}}>
+                    <div style={{fontSize:11,color:planColor[plan]||C.blue,fontWeight:700}}>{planLabel[plan]||plan}</div>
+                    <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:24,fontWeight:800,color:C.textDark,marginTop:4}}>{count}</div>
+                    <div style={{fontSize:11,color:C.textLight}}>€{(count*(planPrice[plan]||0)).toFixed(2)} total</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent subscriptions */}
+            <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+              <div style={{fontWeight:800,fontSize:15,color:C.textDark,marginBottom:16}}>Recent Subscriptions</div>
+              {paidSubs.slice(0,8).map((s,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:i<7?"1px solid #f0f4f8":"none"}}>
+                  <div style={{width:36,height:36,borderRadius:"50%",background:`${planColor[s.plan]||C.blue}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+                    {s.plan?.startsWith("premium")?"⭐":"💙"}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{s.name||s.email||"User"}</div>
+                    <div style={{fontSize:11,color:C.textLight}}>{s.email} · {new Date(s.subscribedAt).toLocaleDateString()}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:planColor[s.plan]||C.blue}}>{planLabel[s.plan]||s.plan}</div>
+                    <div style={{fontSize:12,color:C.green,fontWeight:700}}>€{s.revenue?.toFixed(2)||"—"}</div>
+                  </div>
+                  {s.discountCode&&<div style={{fontSize:10,background:"rgba(26,160,100,0.1)",color:"#1a8a50",padding:"2px 8px",borderRadius:50,fontWeight:700}}>{s.discountCode}</div>}
+                </div>
+              ))}
+              {paidSubs.length===0&&<div style={{textAlign:"center",color:C.textLight,padding:24,fontSize:13}}>No subscriptions yet</div>}
+            </div>
+          </div>
+        )}
+
+        {/* USERS */}
+        {tab==="users" && (
+          <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+              <div style={{fontWeight:800,fontSize:15,color:C.textDark}}>All Users ({users.length})</div>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                <thead>
+                  <tr style={{background:"#f8fafc"}}>
+                    {["Name","Email","Plan","Trial Start","Gender","Silhouette"].map(h=>(
+                      <th key={h} style={{padding:"10px 12px",textAlign:"left",fontWeight:700,color:C.textLight,fontSize:11,textTransform:"uppercase",letterSpacing:"0.06em",borderBottom:"1px solid #e8f0f7"}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u,i)=>(
+                    <tr key={i} style={{borderBottom:"1px solid #f4f8fc"}}>
+                      <td style={{padding:"10px 12px",fontWeight:600,color:C.textDark}}>{u.name||"—"}</td>
+                      <td style={{padding:"10px 12px",color:C.textLight}}>{u.email||"—"}</td>
+                      <td style={{padding:"10px 12px"}}>
+                        <span style={{fontSize:11,fontWeight:700,color:planColor[u.plan]||C.textLight,background:`${planColor[u.plan]||"#999"}15`,padding:"3px 8px",borderRadius:50}}>
+                          {planLabel[u.plan]||u.plan||"—"}
+                        </span>
+                      </td>
+                      <td style={{padding:"10px 12px",color:C.textLight,fontSize:12}}>{u.trialStart?new Date(u.trialStart).toLocaleDateString():"—"}</td>
+                      <td style={{padding:"10px 12px",color:C.textLight}}>{u.gender||"—"}</td>
+                      <td style={{padding:"10px 12px",color:C.textLight}}>{u.silhouette||"—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {users.length===0&&<div style={{textAlign:"center",color:C.textLight,padding:24}}>No users found</div>}
+            </div>
+          </div>
+        )}
+
+        {/* REVENUE */}
+        {tab==="revenue" && (
+          <div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+              {[
+                {label:"Total Revenue",value:"€"+totalRevenue.toFixed(2),sub:"All time",color:C.green},
+                {label:"Est. MRR",value:"€"+mrr.toFixed(2),sub:"Monthly recurring",color:C.blue},
+                {label:"Normal Plan Revenue",value:"€"+paidSubs.filter(s=>s.plan?.startsWith("normal")).reduce((a,b)=>a+(b.revenue||0),0).toFixed(2),sub:`${normalCount} subscribers`,color:C.blue},
+                {label:"Premium Plan Revenue",value:"€"+paidSubs.filter(s=>s.plan?.startsWith("premium")).reduce((a,b)=>a+(b.revenue||0),0).toFixed(2),sub:`${premiumCount} subscribers`,color:C.gold},
+              ].map(s=>(
+                <div key={s.label} style={{background:"#fff",borderRadius:14,padding:"18px 20px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:C.textLight,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6}}>{s.label}</div>
+                  <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:32,fontWeight:800,color:s.color}}>{s.value}</div>
+                  <div style={{fontSize:12,color:C.textLight,marginTop:4}}>{s.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+              <div style={{fontWeight:800,fontSize:15,color:C.textDark,marginBottom:16}}>All Transactions</div>
+              {subs.map((s,i)=>(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderBottom:i<subs.length-1?"1px solid #f4f8fc":"none"}}>
+                  <div style={{width:38,height:38,borderRadius:10,background:`${planColor[s.plan]||C.blue}15`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>
+                    {s.plan?.startsWith("premium")?"⭐":"💙"}
+                  </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700,fontSize:13,color:C.textDark}}>{s.name||"User"}</div>
+                    <div style={{fontSize:11,color:C.textLight}}>{s.email} · {new Date(s.subscribedAt).toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:planColor[s.plan]||C.blue}}>{planLabel[s.plan]||s.plan}</div>
+                    {s.discountCode&&<div style={{fontSize:10,color:"#1a8a50",fontWeight:700}}>🏷️ {s.discountCode} (-10%)</div>}
+                  </div>
+                  <div style={{fontFamily:"'Montserrat',sans-serif",fontSize:18,fontWeight:800,color:C.green,minWidth:60,textAlign:"right"}}>€{s.revenue?.toFixed(2)||"—"}</div>
+                </div>
+              ))}
+              {subs.length===0&&<div style={{textAlign:"center",color:C.textLight,padding:24,fontSize:13}}>No transactions yet</div>}
+            </div>
+          </div>
+        )}
+
+        {/* DISCOUNT CODES */}
+        {tab==="codes" && (
+          <div style={{background:"#fff",borderRadius:14,padding:20,boxShadow:"0 2px 8px rgba(0,0,0,0.06)",border:"1px solid #e8f0f7"}}>
+            <div style={{fontWeight:800,fontSize:15,color:C.textDark,marginBottom:16}}>Discount Codes (10% off)</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:12}}>
+              {DISCOUNT_CODES_LIST.map(code=>{
+                const usages=subs.filter(s=>s.discountCode===code);
+                const saved=usages.reduce((a,b)=>a+(b.revenue||0)*0.1,0);
+                return(
+                  <div key={code} style={{background:"#f8fafc",borderRadius:12,padding:"14px 16px",border:"1px solid #e0eaf0"}}>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                      <code style={{fontSize:14,fontWeight:800,color:C.blue,letterSpacing:"0.05em"}}>{code}</code>
+                      <span style={{fontSize:11,background:"rgba(26,160,100,0.1)",color:"#1a8a50",padding:"2px 8px",borderRadius:50,fontWeight:700}}>10% OFF</span>
+                    </div>
+                    <div style={{fontSize:12,color:C.textLight}}>Used: <strong style={{color:C.textDark}}>{usages.length}×</strong></div>
+                    <div style={{fontSize:12,color:C.textLight}}>Discount given: <strong style={{color:C.red}}>-€{saved.toFixed(2)}</strong></div>
+                    <div style={{fontSize:11,color:C.textLight,marginTop:4}}>Valid: Normal & Premium · Monthly & Annual</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
 const MainApp=({user:initialUser,onLogout,onShowPaywall})=>{
   const [tab,setTab]=useState("home");
   const [history,setHistory]=useState(seedHistory);
@@ -3941,11 +4223,23 @@ function App(){
     setUser(null);setStep("login");
   };
 
-  const handleSub=(plan)=>{
+  const handleSub=(plan,discountCode)=>{
     const u={...user,plan};
     setUser(u);
     sessionStorage.setItem("p2c_session",JSON.stringify(u));
-    if(u.uid) saveUserToDb(u.uid,{...u});
+    if(u.uid){
+      saveUserToDb(u.uid,{...u});
+      // Save subscription event for admin analytics
+      if(fbDb&&fbRef&&fbSet&&plan!=="trial"){
+        const subEvent={
+          uid:u.uid, name:u.name||"", email:u.email||"",
+          plan, discountCode:discountCode||null,
+          subscribedAt:Date.now(),
+          revenue:plan==="normal_monthly"?2.99:plan==="normal_annual"?29.99:plan==="premium_monthly"?4.99:49.99,
+        };
+        try{fbSet(fbRef(fbDb,`subscriptions/${u.uid}_${Date.now()}`),subEvent);}catch(e){}
+      }
+    }
     setStep("app");
   };
 
@@ -3967,7 +4261,16 @@ function App(){
   if(step==="app") return<MainApp user={user} onLogout={handleLogout} onShowPaywall={()=>setStep("paywall")}/>;
   return null;
 }
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+const checkAdmin = () => {
+  const hash = window.location.hash;
+  const search = window.location.search;
+  const path = window.location.pathname;
+  return hash === "#admin" || hash === "#/admin" || 
+         search.includes("admin=1") || search.includes("admin") ||
+         path.includes("/admin") ||
+         localStorage.getItem("p2c_admin_mode") === "1";
+};
+ReactDOM.createRoot(document.getElementById("root")).render(checkAdmin() ? <AdminDashboard/> : <App/>);
 </script>
 
 <script>
