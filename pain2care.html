@@ -2299,7 +2299,7 @@ const PainModule=({user,history,setHistory,onShowPaywall,onBack,initialTab})=>{
         {activeAreas.length>0&&<GCard>
           <div style={{fontWeight:800,fontSize:13,color:C.textDark,marginBottom:12}}>{T.painAreas}</div>
           {activeAreas.map(([id,data])=>{
-            const areaInfo=[...FRONT_AREAS,...BACK_AREAS].find(a=>a.id===id);
+            const areaInfo=(ALL_AREAS||[]).find(a=>a.id===id);
             const maxI=data.maxIntensity||0;
             const col=maxI>=7?C.red:maxI>=4?C.gold:C.green;
             const painAreas=Object.entries(data.subareas||{}).filter(([,v])=>v>0).map(([n,v])=>`${n} (${v}/10)`).join(', ');
