@@ -1980,8 +1980,10 @@ const PaywallScreen=({user,onSubscribe,onLogout})=>{
       </div>
       {daysLeft>0&&<div className="glass" style={{borderRadius:14,padding:"11px 15px",marginBottom:14,display:"flex",alignItems:"center",gap:12}}>
         <span style={{fontSize:18}}>⏳</span>
-        <div style={{flex:1}}><div style={{fontWeight:800,fontSize:13,color:C.gold}}>{T.daysLeft(daysLeft)}</div>
-        <div style={{fontSize:11,color:C.textLight}}>{T.currentlyNormalPlan}</div></div>
+        <div style={{flex:1}}>
+          <div style={{fontWeight:800,fontSize:13,color:C.gold}}>{T.daysLeft(daysLeft)}</div>
+          <div style={{fontSize:11,color:C.textLight}}>{T.currentlyNormalPlan}</div>
+        </div>
       </div>}
       {/* Tier selector */}
       <div style={{display:"flex",gap:10,marginBottom:16}}>
@@ -2017,11 +2019,67 @@ const PaywallScreen=({user,onSubscribe,onLogout})=>{
         ))}
       </div>
       {/* Billing toggle */}
-      <div className="glass" style={{borderRadius:13,padding:4,display:"flex",gap:4,marginBottom:16}}>        {[{id:"monthly",label:T.monthly},{id:"annual",label:"Annual (save 40%)"}].map(b=>{          const p=calcPrice(tier,b.id);          return(          <div key={b.id} onClick={()=>setBilling(b.id)}            style={{flex:1,padding:"11px 8px",borderRadius:10,textAlign:"center",cursor:"pointer",              background:billing===b.id?(tier==="premium"?"rgba(249,168,37,0.85)":"rgba(26,111,160,0.85)"):"transparent",transition:"all 0.2s"}}>            <div style={{fontWeight:700,fontSize:11,color:billing===b.id?"#fff":C.textMid}}>{b.label}</div>            <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:5,marginTop:1}}>              {p.original&&<div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:700,fontSize:13,color:billing===b.id?"rgba(255,255,255,0.6)":"#aaa",textDecoration:"line-through"}}>{p.original}</div>}              <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,color:billing===b.id?"#fff":C.textDark}}>{p.display}</div>            </div>            <div style={{fontSize:10,color:billing===b.id?"rgba(255,255,255,0.75)":C.textLight}}>{p.sub}</div>          </div>          );        })}      </div>
+      <div className="glass" style={{borderRadius:13,padding:4,display:"flex",gap:4,marginBottom:16}}>
+        {[{id:"monthly",label:T.monthly},{id:"annual",label:"Annual (save 40%)"}].map(b=>{
+          const p=calcPrice(tier,b.id);
+          return(
+            <div key={b.id} onClick={()=>setBilling(b.id)}
+              style={{flex:1,padding:"11px 8px",borderRadius:10,textAlign:"center",cursor:"pointer",
+                background:billing===b.id?(tier==="premium"?"rgba(249,168,37,0.85)":"rgba(26,111,160,0.85)"):"transparent",
+                transition:"all 0.2s"}}>
+              <div style={{fontWeight:700,fontSize:11,color:billing===b.id?"#fff":C.textMid}}>{b.label}</div>
+              <div style={{display:"flex",alignItems:"baseline",justifyContent:"center",gap:5,marginTop:1}}>
+                {p.original&&<div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:700,fontSize:13,
+                  color:billing===b.id?"rgba(255,255,255,0.6)":"#aaa",textDecoration:"line-through"}}>{p.original}</div>}
+                <div style={{fontFamily:"'Montserrat',sans-serif",fontWeight:800,fontSize:22,
+                  color:billing===b.id?"#fff":C.textDark}}>{p.display}</div>
+              </div>
+              <div style={{fontSize:10,color:billing===b.id?"rgba(255,255,255,0.75)":C.textLight}}>{p.sub}</div>
+            </div>
+          );
+        })}
+      </div>
       {/* Discount code */}
-      <div className="glass" style={{borderRadius:13,padding:"12px 14px",marginBottom:14}}>        <div style={{fontSize:11,fontWeight:700,color:C.textMid,marginBottom:8}}>🏷️ Discount Code</div>        {appliedDiscount          ?<div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"rgba(26,160,100,0.1)",borderRadius:9,border:"1px solid rgba(26,160,100,0.3)"}}>            <span style={{fontSize:14}}>✅</span>            <span style={{flex:1,fontSize:13,fontWeight:700,color:"#1a8a50"}}>{appliedDiscount.pct}% discount applied — code: {appliedDiscount.code}</span>            <button onClick={()=>setAppliedDiscount(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#999",padding:0}}>✕</button>          </div>          :<div style={{display:"flex",gap:8}}>            <input              value={discountCode}              onChange={e=>setDiscountCode(e.target.value.toUpperCase())}              onKeyDown={e=>e.key==="Enter"&&applyCode()}              placeholder="Enter code (e.g. PAIN10)"              style={{flex:1,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(26,111,160,0.2)",fontSize:13,fontFamily:"'Nunito',sans-serif",letterSpacing:"0.05em",background:"rgba(255,255,255,0.7)",outline:"none"}}            />            <button onClick={applyCode}              style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.blue,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>              Apply            </button>          </div>        }        {discountError&&<div style={{fontSize:11,color:C.red,marginTop:6}}>⚠️ {discountError}</div>}      </div>
+      <div className="glass" style={{borderRadius:13,padding:"12px 14px",marginBottom:14}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.textMid,marginBottom:8}}>🏷️ Discount Code</div>
+        {appliedDiscount
+          ?<div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:"rgba(26,160,100,0.1)",borderRadius:9,border:"1px solid rgba(26,160,100,0.3)"}}>
+            <span style={{fontSize:14}}>✅</span>
+            <span style={{flex:1,fontSize:13,fontWeight:700,color:"#1a8a50"}}>{appliedDiscount.pct}% discount applied — code: {appliedDiscount.code}</span>
+            <button onClick={()=>setAppliedDiscount(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"#999",padding:0}}>✕</button>
+          </div>
+          :<div style={{display:"flex",gap:8}}>
+            <input
+              value={discountCode}
+              onChange={e=>setDiscountCode(e.target.value.toUpperCase())}
+              onKeyDown={e=>e.key==="Enter"&&applyCode()}
+              placeholder="Enter code (e.g. PAIN10)"
+              style={{flex:1,padding:"9px 12px",borderRadius:9,border:"1px solid rgba(26,111,160,0.2)",
+                fontSize:13,fontFamily:"'Nunito',sans-serif",background:"rgba(255,255,255,0.7)",outline:"none"}}
+            />
+            <button onClick={applyCode}
+              style={{padding:"9px 16px",borderRadius:9,border:"none",background:C.blue,color:"#fff",fontWeight:700,fontSize:13,cursor:"pointer"}}>
+              Apply
+            </button>
+          </div>
+        }
+        {discountError&&<div style={{fontSize:11,color:C.red,marginTop:6}}>⚠️ {discountError}</div>}
+      </div>
       {/* Subscribe button */}
-      <button onClick={doSub} disabled={loading}        style={{width:"100%",padding:"15px",borderRadius:14,border:"none",cursor:"pointer",fontWeight:800,fontSize:15,color:"#fff",          background:tier==="premium"?`linear-gradient(135deg,${C.gold},#e67e00)`:`linear-gradient(135deg,${C.blue},#1a5fa0)`,          animation:"glow 2.5s ease-in-out infinite",boxShadow:tier==="premium"?"0 4px 18px rgba(249,168,37,0.4)":"0 4px 18px rgba(26,111,160,0.4)"}}>        {loading?"Processing…":`Get ${tier==="premium"?"⭐ Premium":"💙 Normal"} · ${calcPrice(tier,billing).display} →`}      </button>      <div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:10}}>Cancel anytime · No hidden fees</div>
+      <button onClick={doSub} disabled={loading}
+        style={{width:"100%",padding:"15px",borderRadius:14,border:"none",cursor:"pointer",fontWeight:800,fontSize:15,color:"#fff",
+          background:tier==="premium"?`linear-gradient(135deg,${C.gold},#e67e00)`:`linear-gradient(135deg,${C.blue},#1a5fa0)`,
+          animation:"glow 2.5s ease-in-out infinite",
+          boxShadow:tier==="premium"?"0 4px 18px rgba(249,168,37,0.4)":"0 4px 18px rgba(26,111,160,0.4)"}}>
+        {loading?"Processing…":`Get ${tier==="premium"?"⭐ Premium":"💙 Normal"} · ${calcPrice(tier,billing).display} →`}
+      </button>
+      <div style={{fontSize:11,color:C.textLight,textAlign:"center",marginTop:10}}>Cancel anytime · No hidden fees</div>
+      {daysLeft>0&&<div style={{textAlign:"center",marginTop:12}}>
+        <span onClick={()=>onSubscribe("trial")} style={{fontSize:12,color:C.textLight,cursor:"pointer",textDecoration:"underline"}}>
+          Continue free trial ({daysLeft} day{daysLeft!==1?"s":""} left)
+        </span>
+      </div>}
+    </div>
   );
 };
 
